@@ -15,14 +15,61 @@
 var util = require('./utils');
 var author = require('./mbAuthor');
 var subs = require('./mbSubscriber');
+var api = require('./server');
+
+const DEBUG_SKIP_STREAMS = true;
+
+const port = 8000;
 
 async function main() {
-    /*
-      Initizialization (Multi Branch Pub)
-      Loading configuration, generating or loading author
-      author -> announces channel
- 
-    */
+  /*
+    Initizialization (Multi Branch Pub)
+    Loading configuration, generating or loading author
+    author -> announces channel
+
+  */
+ // Make announcement link avaiable
+  api.updateAnnouncementLink('1234456');
+  // Start rest api
+  rest = api.createAPI();
+  rest.listen(port, () => {
+    console.log(`Server listening at http://localhost:${port}`)
+  });
+  // Verify author
+  let authorDid = subs.getAuthorDID('localhost', port, protocol='http');
+  authorDid.then(function(result) {
+    console.log('Author DID: ' + result.body);
+    if (util.verifyDID(result.body)) {
+      console.log('Author verified');
+    } else {
+      console.log('Not the author');
+    }
+  });
+  // Get announcement link
+  let authorAnn = subs.getAnnouncementLink('localhost', port, protocol='http');
+  authorAnn.then(function(result) {
+    console.log('Ann Link recv: ' + result.body);
+  });
+  // client send subscribtion link to author
+  let data = subs.makeSubLinkJson('1312312', '34634', 'hello');
+  let code = subs.sendSubscribtionLink('localhost', port, data, protocol='http')
+  code.then(function(result) {
+    console.log('Sub link posted: ' + result.statusCode);
+  });
+  // Get subscribed clients
+  var actSubs = {};
+  while(Object.keys(actSubs).length === 0) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    subscribers = api.getSubscribers();
+    actSubs = JSON.parse(JSON.stringify(subscribers));
+  }
+  console.log('Subscribers:' + JSON.stringify(actSubs));
+  /* 
+  *   Streams 
+  *
+  */
+  if(!DEBUG_SKIP_STREAMS) {
+
     const client = await util.makeClient();
     // Create channel/ Open channel
     let auth = await author.makeAuthor(client);
@@ -55,7 +102,7 @@ async function main() {
     await author.receiveSubscription(subLinkA, auth);
     await author.receiveSubscription(subLinkB, auth);
     console.log("Subscription processed");
-  
+
     console.log("Sending Keyload");
     response = await auth.clone().send_keyload_for_everyone(announcementLink.copy());
     let keyload_link = response.link;
@@ -69,10 +116,10 @@ async function main() {
       sends messages and attaches to link (single branch: attach to last message)
     */
     await util.syncState(auth);
-  
+
     let public_payload = util.toBytes("Public");
     let masked_payload = util.toBytes("Masked");
-  
+
     console.log("Author Sending multiple signed packets");
     let msgLink = keyload_link;
     for (var x = 0; x < 3; x++) {
@@ -82,15 +129,16 @@ async function main() {
     }
     /*
 
-      Subscriber receives messages
+        Subscriber receives messages
 
-      Subscriber -> fetch messages
+        Subscriber -> fetch messages
     */
     console.log("\Subscriber fetching next messages");
     let messagesA = await util.fetchNextMessages(subA);
     util.showMessages(messagesA, "SubA");
     let messagesB = await util.fetchNextMessages(subB);
     util.showMessages(messagesB, "SubB");
+  }
 }
 
 main();

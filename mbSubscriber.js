@@ -17,12 +17,16 @@ const fs = require('fs');
 const configPath = './config/default.json';
 const config = require(configPath);
 
+var util = require('./utils');
+
 module.exports = {
     generateNewSubscriber,
     subscripeToChannel,
     receiveAnnouncement,
     sendSubscribtionLink,
-    getAnnouncementLink
+    getAnnouncementLink,
+    makeSubLinkJson,
+    getAuthorDID
 }
 
 // Generate Subscriber
@@ -47,10 +51,53 @@ async function receiveAnnouncement(announcementLink, subscriber) {
     await subscriber.clone().receive_announcement(announcementLink.copy());
 }    
 
-function sendSubscribtionLink() {
-
+function sendSubscribtionLink(url, port, dataJson, protocol='https') {
+    return util.postRequest(url, port, '/sub', dataJson, protocol).then((status) => {
+        const response = {
+            statusCode: status
+        };
+    return response;
+    }).catch(e => { 
+        return response = {
+            statusCode: e
+        };
+    }); 
 }
 
-function getAnnouncementLink () {
+function getAnnouncementLink (url, port, protocol='https') {
+    return util.getRequest(url, port, '/ann', protocol).then((data) => {
+        const response = {
+            statusCode: 200,
+            body: data
+        };
+      return response;
+    }).catch(e => { 
+        return response = {
+            statusCode: e,
+            body: 'Error getting Announcement'
+        };
+    }); 
+}
 
+function getAuthorDID (url, port, protocol='https') {
+    return util.getRequest(url, port, '/did', protocol).then((data) => {
+        const response = {
+            statusCode: 200,
+            body: data
+        };
+      return response;
+    }).catch(e => { 
+        return response = {
+            statusCode: e,
+            body: 'Error getting author DID'
+        };
+    });
+}
+
+function makeSubLinkJson(subscribtionLink, did, name) {
+    return data = JSON.stringify({
+        sublink: subscribtionLink,
+        did: did,
+        name: name
+      });
 }

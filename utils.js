@@ -15,6 +15,8 @@ streams.set_panic_hook();
 const fs = require('fs');
 const configPath = './config/default.json';
 const config = require(configPath);
+const https = require('https');
+const http = require('http');
 
 module.exports = {
     showMessages,
@@ -26,7 +28,83 @@ module.exports = {
     makeSeed,
     writeJsonFile,
     makeClient,
-    getNodeURL
+    getNodeURL,
+    getRequest,
+    postRequest,
+    verifyDID
+}
+
+function postRequest(url, port, path, dataJson, protocol='https') {
+    return new Promise((resolve, reject) => {
+        const options = {
+            hostname: url,
+            port: port,
+            path: path,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': dataJson.length
+              }
+        }
+
+        let rest = https;
+        if (protocol !== 'https') {
+            rest = http;
+        }
+
+        const req = rest.request(options, (res) => {
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+                return reject(res.statusCode);
+            }
+            res.on('data', function(chunk) {
+                process.stdout.write(chunk);
+            });
+            resolve(res.statusCode);
+        });
+        req.on('error', (e) => {
+        reject(e.message);
+        });
+    req.write(dataJson);
+    req.end();
+    });
+}
+
+function getRequest(url, port, path, protocol='https') {
+    return new Promise((resolve, reject) => {
+        const options = {
+            hostname: url,
+            port: port,
+            path: path,
+            method: 'GET'
+        }
+
+        let rest = https;
+        if (protocol !== 'https') {
+            rest = http;
+        }
+
+        const req = rest.request(options, (res) => {
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+                return reject(res.statusCode);
+            }
+            var body = [];
+            res.on('data', function(chunk) {
+                body.push(chunk);
+            });
+            res.on('end', function() {
+                try {
+                    body = JSON.parse(Buffer.concat(body).toString());
+                } catch(e) {
+                    reject(e);
+                }
+                resolve(body);
+            });
+        });
+        req.on('error', (e) => {
+        reject(e.message);
+        });
+    req.end();
+    });
 }
 
 // Show fetched messages
@@ -131,4 +209,8 @@ async function makeClient() {
     // Build client from node url
     const client = await new streams.ClientBuilder().node(nodeUrl).build();
     return client;
+}
+
+function verifyDID(did) {
+    return true;
 }

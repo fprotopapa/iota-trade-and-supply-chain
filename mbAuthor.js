@@ -17,6 +17,8 @@ const fs = require('fs');
 const configPath = './config/default.json';
 const config = require(configPath);
 
+
+
 var util = require('./utils');
 
 module.exports = {
@@ -24,8 +26,6 @@ module.exports = {
   logChannel,
   parseAnnouncementLink,
   receiveSubscription,
-  serveAnnouncementLink,
-  getSubscribtionLink
 }
 
 async function makeAuthor(client) {
@@ -81,12 +81,4 @@ function parseAnnouncementLink(author) {
 // Author receiving subscription
 async function receiveSubscription(subscribtionLink, author) {
   await author.clone().receive_subscribe(subscribtionLink.copy());
-}
-
-function serveAnnouncementLink () {
-    
-}
-
-function getSubscribtionLink() {
-
 }

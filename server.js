@@ -3,15 +3,65 @@
 *  SPDX-FileCopyrightText: Copyright 2021 Fabbio Protopapa
 *  SPDX-License-Identifier: MIT
 *
+* Cmd:
+* node server
 */
-const express = require('express');
-const app = express();
-const port = 8000;
+var express = require('express');
 
-app.get('/', (req, res) => {
-    res.send('Hello World!')
+var util = require('./utils');
+
+module.exports = { 
+  createAPI,
+  updateAnnouncementLink,
+  getSubscribers
+};
+
+var announcementLink = null;
+var subscribers = {};
+
+function updateAnnouncementLink(annLink) {
+  announcementLink = annLink;
+}
+
+function getSubscribers() {
+  return subscribers;
+}
+
+function createAPI() {
+  var rest = express();
+  
+  rest.use(express.json());
+
+  rest.get('/', (req, res) => {
+    res.send(JSON.stringify('Hello!'));
   });
 
-app.listen(port, () => {
-  console.log(`Server listening at http://localhost:${port}`)
-});
+  rest.get('/ann', (req, res) => {
+    if (announcementLink === null) {
+      res.send(JSON.stringify('No announcement available.'));
+    } else {
+      res.send(JSON.stringify(announcementLink));
+    }
+  });
+
+  rest.post('/sub', (req, res) => {
+    let name = req.body.name;
+    let sublink = req.body.sublink;
+    let did = req.body.did;
+    if (util.verifyDID(did)) {
+      subscribers[name] = {};
+      subscribers[name]['subLink'] = sublink;
+      subscribers[name]['did'] = did;
+      console.log(subscribers);
+      res.send();
+    } else {
+      res.status(403).send();
+    }  
+  });
+
+  rest.get('/did', (req, res) => {
+    res.send(JSON.stringify('author\'s DID'));
+  });
+
+  return rest;
+}

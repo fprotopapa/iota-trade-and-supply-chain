@@ -1,6 +1,7 @@
 {
   "env": {
-    "nodeUrl": "HORNET_NODE_ADDRESS"
+    "nodeUrl": "HORNET_NODE_ADDRESS",
+    "restUrl": "REST_SERVER"
   },
   "author": {
     "seed": null,

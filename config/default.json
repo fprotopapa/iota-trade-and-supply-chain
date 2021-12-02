@@ -1,0 +1,12 @@
+{
+  "env": {
+    "nodeUrl": "HORNET_NODE_ADDRESS"
+  },
+  "author": {
+    "seed": "Exfw0YCncLuIG02bC8BjxN2ijA6co9NEwVYxQLaVcpEsu4FRNbu59PELlYWtIJ2PzzKJgUZq",
+    "setSeed": true,
+    "announcementLink": "44b4785f29dbc7ce29ac068a9b6d296b6b87a97944b261171c1422b500b166510000000000000000:b5e88645be21fdf3906cd389",
+    "channelAddress": "44b4785f29dbc7ce29ac068a9b6d296b6b87a97944b261171c1422b500b166510000000000000000",
+    "channelType": 1
+  }
+}

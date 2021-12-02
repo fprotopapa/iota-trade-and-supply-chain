@@ -31,7 +31,9 @@ module.exports = {
     getNodeURL,
     getRequest,
     postRequest,
-    verifyDID
+    verifyDID,
+    getRestURL,
+    parseAnnouncementLinkString
 }
 
 function postRequest(url, port, path, dataJson, protocol='https') {
@@ -64,6 +66,7 @@ function postRequest(url, port, path, dataJson, protocol='https') {
         req.on('error', (e) => {
         reject(e.message);
         });
+    //req.status(200);
     req.write(dataJson);
     req.end();
     });
@@ -204,6 +207,17 @@ function getNodeURL() {
     return nodeUrl
 }
 
+function getRestURL() {
+    // Read env variable name from config file
+    restUrlEnv = config.env.restUrl; 
+    // Get node url from environment, if not defined fall back to default
+    let restUrl = process.env[restUrlEnv];
+    if (restUrl === undefined) {
+        restUrl = "localhost";
+    }
+    return restUrl
+}
+
 async function makeClient() {
     let nodeUrl = getNodeURL();
     // Build client from node url
@@ -213,4 +227,8 @@ async function makeClient() {
 
 function verifyDID(did) {
     return true;
+}
+
+function parseAnnouncementLinkString(announcementLinkStr) {
+    return streams.Address.parse(announcementLinkStr);
 }

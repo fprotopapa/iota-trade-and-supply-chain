@@ -20,7 +20,7 @@ var announcementLink = null;
 var subscribers = {};
 
 function updateAnnouncementLink(annLink) {
-  announcementLink = annLink;
+  announcementLink = annLink.toString();
 }
 
 function getSubscribers() {

@@ -33,7 +33,8 @@ module.exports = {
     postRequest,
     verifyDID,
     getRestURL,
-    parseAnnouncementLinkString
+    parseAnnouncementLinkString,
+    fetchState
 }
 
 function postRequest(url, port, path, dataJson, protocol='https') {
@@ -231,4 +232,11 @@ function verifyDID(did) {
 
 function parseAnnouncementLinkString(announcementLinkStr) {
     return streams.Address.parse(announcementLinkStr);
+}
+
+function fetchState(sender) {
+    states = sender.fetch_state();
+    //console.log('link: ',states[0][0].get_link(), 'seq: ', states[0][0].get_seq_no(), 'branch: ', states[0][0].get_branch_no());
+    //console.log('link: ',states[1].get_link(), 'seq: ', states[1].get_seq_no(), 'branch: ', states[1].get_branch_no());
+    return states;
 }

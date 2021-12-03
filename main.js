@@ -120,36 +120,72 @@ async function main() {
     let keyload_link = response.link;
     console.log("Keyload message at: ", keyload_link.toString());
     console.log("Keyload message index: " + keyload_link.toMsgIndexHex());
+    let keyloadA = subA.receive
     /*
 
-      Author sends messages 
+      Author sends messages to public branch
 
       Author -> synch state -> build payload in bytes ->
-      sends messages and attaches to link (single branch: attach to last message)
+      sends messages and attaches to link 
+
+      Subs -> publishing to private branch
     */
     if (!DEBUG_SKIP_SENDING) {
+      // Author sending packages
       await util.syncState(auth);
-
-      let public_payload = util.toBytes("Public");
-      let masked_payload = util.toBytes("Masked");
-
-      console.log("Author Sending multiple signed packets");
-      let msgLink = keyload_link;
-      for (var x = 0; x < 3; x++) {
+      // tagged packet
+      // let public_payload = util.toBytes("");
+      // let masked_payload = util.toBytes("PB Auth Public branch");
+      // console.log("Author sending tagged packet to private branch");
+      // response = await auth.clone().send_tagged_packet(keyload_link, public_payload, masked_payload);
+      // let tag_link = response.link;
+      // console.log("Tag packet at: ", tag_link.toString());
+      // console.log("Tag packet index: " + tag_link.toMsgIndexHex());
+      // Signed packet
+      let public_payload = util.toBytes("PB Public branch");
+      let masked_payload = util.toBytes("PB Auth Public branch");
+      console.log("Author sending signed packet to public branch");
+      let msgLink = announcementLink;
+      for (var x = 0; x < 1; x++) {
         msgLink = await util.sendSignedPacket(msgLink, auth, public_payload, masked_payload);
         console.log("Signed packet at: ", msgLink.toString());
         console.log("Signed packet index: " + msgLink.toMsgIndexHex());
       }
+      // SubA sending packages
+      public_payload = util.toBytes("");
+      masked_payload = util.toBytes("PB A Private branch");
+      console.log("SubA sending signed packet to private branch");
+      // Retrieve keyload (first message on channel) prior syncState
+      let messagesA = await util.fetchNextMessages(subA);
+      console.log(messagesA);
+      msgLink = messagesA[0][0].link;
+      console.log("Address: ", msgLink.toString());
+      await util.syncState(subA);
+      msgLink = await util.sendSignedPacket(msgLink, subA, public_payload, masked_payload);
+      // SubB sending packages
+      // fetch latest messages or with user state
+      let states = util.fetchState(subB);
+      console.log(states);
+      
+      public_payload = util.toBytes("");
+      masked_payload = util.toBytes("PB B Private branch");
+      console.log("SubB sending signed packet to private branch");
+      let messagesB = await util.fetchNextMessages(subB);
+      await util.syncState(subB);
+      msgLink = await util.sendSignedPacket(msgLink, subB, public_payload, masked_payload);
       /*
 
           Subscriber receives messages
 
           Subscriber -> fetch messages
       */
-      console.log("\Subscriber fetching next messages");
-      let messagesA = await util.fetchNextMessages(subA);
+      console.log("Author fetching next messages");
+      messagesAut = await util.fetchNextMessages(auth);
+      util.showMessages(messagesAut, "Author");
+      console.log("Subscriber fetching next messages");
+      messagesA = await util.fetchNextMessages(subA);
       util.showMessages(messagesA, "SubA");
-      let messagesB = await util.fetchNextMessages(subB);
+      messagesB = await util.fetchNextMessages(subB);
       util.showMessages(messagesB, "SubB");
     }
   }

@@ -26,7 +26,8 @@ module.exports = {
     sendSubscribtionLink,
     getAnnouncementLink,
     makeSubLinkJson,
-    getAuthorDID
+    getAuthorDID,
+    receiveKeyload
 }
 
 // Generate Subscriber
@@ -100,4 +101,8 @@ function makeSubLinkJson(subscribtionLink, did, name) {
         did: did,
         name: name
       });
+}
+
+function receiveKeyload(subscriber, link) {
+    return subscriber.receive_keyload(link);
 }

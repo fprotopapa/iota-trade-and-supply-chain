@@ -60,6 +60,7 @@ async function main() {
     nodeUrl = util.getNodeURL();
     subA = subs.generateNewSubscriber(nodeUrl, util.makeSeed(81));
     subB = subs.generateNewSubscriber(nodeUrl, util.makeSeed(81));
+    subC = subs.generateNewSubscriber(nodeUrl, util.makeSeed(81));
     // Verify author
     let authorDid = subs.getAuthorDID(restUrl, port, protocol);
     authorDid.then(function(result) {
@@ -81,8 +82,10 @@ async function main() {
     // Receive and subscribe to channel
     await subs.receiveAnnouncement(restAnnLink, subA);
     await subs.receiveAnnouncement(restAnnLink, subB);
+    await subs.receiveAnnouncement(restAnnLink, subC);
     let subLinkA = await subs.subscripeToChannel(restAnnLink, subA);
     let subLinkB = await subs.subscripeToChannel(restAnnLink, subB);
+    let subLinkC = await subs.subscripeToChannel(restAnnLink, subC);
     /*
 
       Author receives subscribtions & sends out keyload (needed to attach messages)
@@ -120,7 +123,7 @@ async function main() {
     let keyload_link = response.link;
     console.log("Keyload message at: ", keyload_link.toString());
     console.log("Keyload message index: " + keyload_link.toMsgIndexHex());
-    let keyloadA = subA.receive
+    
     /*
 
       Author sends messages to public branch
@@ -151,28 +154,34 @@ async function main() {
         console.log("Signed packet at: ", msgLink.toString());
         console.log("Signed packet index: " + msgLink.toMsgIndexHex());
       }
+      public_payload = util.toBytes("PB ");
+      masked_payload = util.toBytes("PB Auth private branch");
+      console.log("Author sending signed packet to private branch");
+      let msgLinkPrv = await util.sendSignedPacket(keyload_link, auth, public_payload, masked_payload);
+      console.log("Signed packet at: ", msgLinkPrv.toString());
+      console.log("Signed packet index: " + msgLinkPrv.toMsgIndexHex());
       // SubA sending packages
       public_payload = util.toBytes("");
       masked_payload = util.toBytes("PB A Private branch");
       console.log("SubA sending signed packet to private branch");
       // Retrieve keyload (first message on channel) prior syncState
-      let messagesA = await util.fetchNextMessages(subA);
-      console.log(messagesA);
-      msgLink = messagesA[0][0].link;
+      //let messagesA = await util.fetchNextMessages(subA);
+      //console.log(messagesA);
+      msgLink = msgLinkPrv; //messagesA[0][0].link;
       console.log("Address: ", msgLink.toString());
       await util.syncState(subA);
       msgLink = await util.sendSignedPacket(msgLink, subA, public_payload, masked_payload);
       // SubB sending packages
-      // fetch latest messages or with user state
-      let states = util.fetchState(subB);
-      console.log(states);
       
-      public_payload = util.toBytes("");
-      masked_payload = util.toBytes("PB B Private branch");
-      console.log("SubB sending signed packet to private branch");
-      let messagesB = await util.fetchNextMessages(subB);
-      await util.syncState(subB);
-      msgLink = await util.sendSignedPacket(msgLink, subB, public_payload, masked_payload);
+
+
+
+      // public_payload = util.toBytes("");
+      // masked_payload = util.toBytes("PB B Private branch");
+      // console.log("SubB sending signed packet to private branch");
+      //let messagesB = await util.fetchNextMessages(subB);
+      // await util.syncState(subB);
+      // msgLink = await util.sendSignedPacket(msgLink, subB, public_payload, masked_payload);
       /*
 
           Subscriber receives messages
@@ -180,14 +189,42 @@ async function main() {
           Subscriber -> fetch messages
       */
       console.log("Author fetching next messages");
-      messagesAut = await util.fetchNextMessages(auth);
+      let messagesAut = await util.fetchNextMessages(auth);
       util.showMessages(messagesAut, "Author");
       console.log("Subscriber fetching next messages");
-      messagesA = await util.fetchNextMessages(subA);
+      let messagesA = await util.fetchNextMessages(subA);
       util.showMessages(messagesA, "SubA");
-      messagesB = await util.fetchNextMessages(subB);
+      let messagesB = await util.fetchNextMessages(subB);
       util.showMessages(messagesB, "SubB");
+      let messagesC = await util.fetchNextMessages(subC);
+      util.showMessages(messagesC, "SubC");
+
+
+      // fetch latest messages or with user state
+      console.log("SubA states");
+      let stateSubA = saveStates(subA);
+      console.log("SubB states");
+      let stateSubB = saveStates(subB);
+      console.log("SubC states");
+      let stateSubC = saveStates(subC);
+      console.log("Auth states");
+      let stateSubAuth = saveStates(auth);
     }
+  }
+
+  function saveStates(part) {
+    let currStates = util.fetchState(part);
+    console.log(currStates);
+    let states = {};
+    for (var i=0; i < currStates.length; i++) {
+      states[i] = {};
+      states[i]["id"] = currStates[i].identifier;
+      states[i]["link"] = currStates[i].link.toString();
+      states[i]["seq"] = currStates[i].seqNo;
+      states[i]["branch"] = currStates[i].branchNo;
+    }
+    console.log(JSON.stringify(states));
+    return states;
   }
 }
 

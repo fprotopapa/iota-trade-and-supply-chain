@@ -4,10 +4,10 @@
     "restUrl": "REST_SERVER"
   },
   "author": {
-    "seed": "KWBreWdrKVOso45PANQUZkFPMtlq3nAaez6ulYkxy4dCeuRnaSne43Qa3KqHJAHVcC5d6wwZ",
+    "seed": "Eu6JNDQdDBQp7xm1El90WuX36ZaD3n7gixB0FzllTowkjvJ86w89HqNYPAeyRIKNyMGYkByN",
     "setSeed": true,
-    "announcementLink": "639b9f128db58f2b8f2aba95d68ff05e14c8c48e84f5ea025a6fbae2f90865030000000000000000:ff5e3bc2b5095c285b4142ce",
-    "channelAddress": "639b9f128db58f2b8f2aba95d68ff05e14c8c48e84f5ea025a6fbae2f90865030000000000000000",
+    "announcementLink": "ca30a28baab3f8911dd12f7eda306cd69bb9d76a813662f319884da67675736b0000000000000000:1a9bc54205cdfbd5cdee240c",
+    "channelAddress": "ca30a28baab3f8911dd12f7eda306cd69bb9d76a813662f319884da67675736b0000000000000000",
     "channelType": 1
   }
 }

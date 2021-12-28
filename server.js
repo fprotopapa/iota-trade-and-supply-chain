@@ -17,10 +17,15 @@ module.exports = {
 };
 
 var announcementLink = null;
+var announcementLinkPub = null;
 var subscribers = {};
 
-function updateAnnouncementLink(annLink) {
-  announcementLink = annLink.toString();
+function updateAnnouncementLink(annLink, isPub) {
+  if (isPub) {
+    announcementLinkPub = annLink.toString();
+  } else {
+    announcementLink = annLink.toString();
+  }
 }
 
 function getSubscribers() {
@@ -41,6 +46,14 @@ function createAPI() {
       res.send(JSON.stringify('No announcement available.'));
     } else {
       res.send(JSON.stringify(announcementLink));
+    }
+  });
+
+  rest.get('/annpub', (req, res) => {
+    if (announcementLinkPub === null) {
+      res.send(JSON.stringify('No announcement available.'));
+    } else {
+      res.send(JSON.stringify(announcementLinkPub));
     }
   });
 

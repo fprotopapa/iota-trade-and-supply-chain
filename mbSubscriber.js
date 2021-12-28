@@ -93,8 +93,8 @@ function sendSubscribtionLink(url, port, dataJson, protocol='https') {
     }); 
 }
 
-function getAnnouncementLink (url, port, protocol='https') {
-    return util.getRequest(url, port, '/ann', protocol).then((data) => {
+function getAnnouncementLink (url, port, protocol='https', link='/ann') {
+    return util.getRequest(url, port, link, protocol).then((data) => {
         const response = {
             statusCode: 200,
             body: data

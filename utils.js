@@ -37,7 +37,33 @@ module.exports = {
     getEncryptPasswd,
     isEncryptedBinary,
     buildPath,
-    checkFileExtension
+    checkFileExtension,
+    fetchLatestLinkSB,
+    showStates
+}
+
+function showStates(caller) {
+    let currStates = fetchState(caller);
+    console.log(currStates);
+    let states = {};
+    for (var i=0; i < currStates.length; i++) {
+      states[i] = {};
+      states[i]["id"] = currStates[i].identifier;
+      states[i]["link"] = currStates[i].link.toString();
+      states[i]["seq"] = currStates[i].seqNo;
+      states[i]["branch"] = currStates[i].branchNo;
+    }
+    console.log(JSON.stringify(states));
+    return states;
+}
+
+// Fetch state
+async function fetchLatestLinkSB(caller, name) {
+    // Fetch publisher states (sync to get same results)
+    console.log('Latest Messagelink for: ', name);
+    await syncState(caller);
+    let currStates = caller.fetch_state();
+    return streams.Address.parse(currStates[0].link.toString());
 }
 
 function postRequest(url, port, path, dataJson, protocol='https') {

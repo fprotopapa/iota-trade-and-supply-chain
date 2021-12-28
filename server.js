@@ -52,7 +52,7 @@ function createAPI() {
       subscribers[name] = {};
       subscribers[name]['subLink'] = sublink;
       subscribers[name]['did'] = did;
-      console.log(subscribers);
+      //console.log(subscribers);
       res.send();
     } else {
       res.status(403).send();

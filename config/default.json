@@ -5,7 +5,7 @@
     "authorPasswd": "AUTHOR_PASSWD"
   },
   "caller": {
-    "setSeed": false
+    "setSeed": true
   },
   "dir": {
     "bin": "binary_instance"

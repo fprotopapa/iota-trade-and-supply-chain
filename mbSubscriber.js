@@ -63,11 +63,15 @@ function makeSubscriber(client, filename) {
 // Subscribe to channel -> Return subscribtion link
 async function subscripeToChannel(announcementLink, subscriber) {
     // catch timeout
+    console.log("--------------");
     console.log("Subscribing...");
+    console.log("--------------");
     response = await subscriber.clone().send_subscribe(announcementLink.copy());
     subLink = response.link
+    console.log("-------------------------------------------------------------");
     console.log("Subscription message at: ", subLink.toString());
     console.log("Subscription message index: " + subLink.toMsgIndexHex());
+    console.log("-------------------------------------------------------------");
     return subLink;
 }
 

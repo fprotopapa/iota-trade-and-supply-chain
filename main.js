@@ -15,7 +15,7 @@ var subs = require('./mbSubscriber');
 var api = require('./server');
 
 const DEBUG_SKIP_STREAMS = false;
-const DEBUG_SKIP_SENDING = true;
+const DEBUG_SKIP_SENDING = false;
 
 
 async function main() {
@@ -34,7 +34,9 @@ async function main() {
   *
   */
   if(!DEBUG_SKIP_STREAMS) {
-
+    console.log("-----------------------------------------");
+    console.log("------ Create/Load Author ---------------");
+    console.log("-----------------------------------------");
     const client = await util.makeClient();
     // Create channel/ Open channel
     let auth = await author.makeAuthor(client, 'author');
@@ -44,9 +46,14 @@ async function main() {
     // Start rest api
     rest = api.createAPI();
     rest.listen(port, () => {
-      console.log(`Server listening at ${protocol}://${restUrl}:${port}`)
+      console.log("------------------------------------------------------");
+      console.log(`Server listening at ${protocol}://${restUrl}:${port}`);
+      console.log("------------------------------------------------------");
     });
     // Log Channel details
+    console.log("-----------------------------------------");
+    console.log("------ Channel Details ------------------");
+    console.log("-----------------------------------------");
     author.logChannel(auth);
     // Log node details
     //console.log("IOTA client info:", await client.getInfo());
@@ -56,6 +63,9 @@ async function main() {
 
       Subscriber -> receives annnouncement -> subscribes to channel
     */
+    console.log("-----------------------------------------");
+    console.log("------ Create/Load Subscriber -----------");
+    console.log("-----------------------------------------");
     // Generate subscriber
     subA = subs.makeSubscriber(client, 'subA');
     subB = subs.makeSubscriber(client, 'subB.bin');
@@ -63,6 +73,9 @@ async function main() {
     // Verify author
     let authorDid = subs.getAuthorDID(restUrl, port, protocol);
     authorDid.then(function(result) {
+      console.log("-----------------------------------------");
+      console.log("------ Author DID Verification ----------");
+      console.log("-----------------------------------------");
       console.log('Author DID: ' + result.body);
       if (util.verifyDID(result.body)) {
         console.log('Author verified');
@@ -76,6 +89,9 @@ async function main() {
     await restAnnLinkStr.then(function(result) {
       let str = JSON.stringify(result.body).replace('"', '').replace(/"$/,'');
       restAnnLink = util.parseAnnouncementLinkString(str);
+      console.log("-----------------------------------------");
+      console.log("------ Announcement Link ----------------");
+      console.log("-----------------------------------------");
       console.log('Ann Link recv: ' + str);
     });
     // Receive and subscribe to channel
@@ -95,12 +111,16 @@ async function main() {
     let subDataA = subs.makeSubLinkJson(subLinkA.toString(), '111111111', 'SubA');
     let responseA = subs.sendSubscribtionLink(restUrl, port, subDataA, protocol)
     responseA.then(function(result) {
+      console.log('----------------');
       console.log('SubA link posted');
+      console.log('----------------');
     });
     let subDataB = subs.makeSubLinkJson(subLinkB.toString(), '222222222', 'SubB');
     let responseB = subs.sendSubscribtionLink(restUrl, port, subDataB, protocol)
     responseB.then(function(result) {
+      console.log('----------------');
       console.log('SubB link posted');
+      console.log('----------------');
     });
     // Get subscribed clients
     var actSubs = {};
@@ -109,19 +129,30 @@ async function main() {
       subscribers = api.getSubscribers();
       actSubs = JSON.parse(JSON.stringify(subscribers));
     }
+    console.log('---------------------- Subscribed Subs ----------------------------------------');
     console.log('Subscribers:' + JSON.stringify(actSubs));
+    console.log('-------------------------------------------------------------------------------');
     // Register subscribers
     let restSubLinkA = util.parseAnnouncementLinkString(actSubs["SubA"]["subLink"]);
     let restSubLinkB = util.parseAnnouncementLinkString(actSubs["SubB"]["subLink"]);
     await author.receiveSubscription(restSubLinkA, auth);
     await author.receiveSubscription(restSubLinkB, auth);
+    console.log('----------------------');
     console.log("Subscription processed");
+    console.log('----------------------');
     // Distributing keyload
+    /*
+    Send over REST !!!!!!!!
+    */
+    console.log('---------------');
     console.log("Sending Keyload");
+    console.log('---------------');
     response = await auth.clone().send_keyload_for_everyone(announcementLink.copy());
     let keyload_link = response.link;
+    console.log('----------------------------- Keyload -------------------------------------------');
     console.log("Keyload message at: ", keyload_link.toString());
     console.log("Keyload message index: " + keyload_link.toMsgIndexHex());
+    console.log('---------------------------------------------------------------------------------');
     
     /*
 
@@ -133,98 +164,75 @@ async function main() {
       Subs -> publishing to private branch
     */
     if (!DEBUG_SKIP_SENDING) {
-      // Author sending packages
-      await util.syncState(auth);
-      // tagged packet
-      // let public_payload = util.toBytes("");
-      // let masked_payload = util.toBytes("PB Auth Public branch");
-      // console.log("Author sending tagged packet to private branch");
-      // response = await auth.clone().send_tagged_packet(keyload_link, public_payload, masked_payload);
-      // let tag_link = response.link;
-      // console.log("Tag packet at: ", tag_link.toString());
-      // console.log("Tag packet index: " + tag_link.toMsgIndexHex());
+      console.log("-----------------------------------------");
+      console.log("------ Subscriber A: Receiving ----------");
+      console.log("-----------------------------------------");
+      // SubA receive messages
+      console.log("Subscriber A fetching next messages");
+      let messagesA = await util.fetchNextMessages(subA);
+      util.showMessages(messagesA, "SubA");
+      // SubA sending packages
+      await util.fetchLatestLinkSB(subA, 'SubA');
       // Signed packet
-      let public_payload = util.toBytes("PB Public branch");
-      let masked_payload = util.toBytes("PB Auth Public branch");
-      console.log("Author sending signed packet to public branch");
-      let msgLink = announcementLink;
+      let public_payloadA = util.toBytes("PB SubA");
+      let masked_payloadA = util.toBytes("PB SubA");
+      console.log("-----------------------------------------");
+      console.log("------ Subscriber A: Sending ------------");
+      console.log("-----------------------------------------");
+      console.log("SubA sending signed packet to private SB");
+      let msgLink = keyload_link;
       for (var x = 0; x < 1; x++) {
-        msgLink = await util.sendSignedPacket(msgLink, auth, public_payload, masked_payload);
+        msgLink = await util.sendSignedPacket(msgLink, subA, public_payloadA, masked_payloadA);
         console.log("Signed packet at: ", msgLink.toString());
         console.log("Signed packet index: " + msgLink.toMsgIndexHex());
       }
-      public_payload = util.toBytes("PB ");
-      masked_payload = util.toBytes("PB Auth private branch");
-      console.log("Author sending signed packet to private branch");
-      let msgLinkPrv = await util.sendSignedPacket(keyload_link, auth, public_payload, masked_payload);
-      console.log("Signed packet at: ", msgLinkPrv.toString());
-      console.log("Signed packet index: " + msgLinkPrv.toMsgIndexHex());
-      // SubA sending packages
-      public_payload = util.toBytes("");
-      masked_payload = util.toBytes("PB A Private branch");
-      console.log("SubA sending signed packet to private branch");
-      // Retrieve keyload (first message on channel) prior syncState
-      //let messagesA = await util.fetchNextMessages(subA);
-      //console.log(messagesA);
-      msgLink = msgLinkPrv; //messagesA[0][0].link;
-      console.log("Address: ", msgLink.toString());
-      await util.syncState(subA);
-      msgLink = await util.sendSignedPacket(msgLink, subA, public_payload, masked_payload);
+      console.log("-----------------------------------------");
+      console.log("------ Subscriber B: Receiving ----------");
+      console.log("-----------------------------------------");
+      // SubB receive messages
+      console.log("Subscriber B fetching next messages");
+      let messagesB = await util.fetchNextMessages(subB);
+      util.showMessages(messagesB, "SubB");
+      console.log("-----------------------------------------");
+      console.log("------ Subscriber B: Sending ------------");
+      console.log("-----------------------------------------");
       // SubB sending packages
-      
-
-
-
-      // public_payload = util.toBytes("");
-      // masked_payload = util.toBytes("PB B Private branch");
-      // console.log("SubB sending signed packet to private branch");
-      //let messagesB = await util.fetchNextMessages(subB);
-      // await util.syncState(subB);
-      // msgLink = await util.sendSignedPacket(msgLink, subB, public_payload, masked_payload);
+      await util.fetchLatestLinkSB(subB, 'SubB');
+      // Signed packet
+      let public_payloadB = util.toBytes("PB SubB");
+      let masked_payloadB = util.toBytes("PB SubB");
+      console.log("SubB sending signed packet to private SB");
+      //let msgLink = keyload_link;
+      for (var x = 0; x < 1; x++) {
+        msgLink = await util.sendSignedPacket(msgLink, subB, public_payloadB, masked_payloadB);
+        console.log("Signed packet at: ", msgLink.toString());
+        console.log("Signed packet index: " + msgLink.toMsgIndexHex());
+      }
       /*
 
           Subscriber receives messages
 
           Subscriber -> fetch messages
       */
+      console.log("-----------------------------------------");
+      console.log("--------- Fetch all messages ------------");
+      console.log("-----------------------------------------");
       console.log("Author fetching next messages");
       let messagesAut = await util.fetchNextMessages(auth);
       util.showMessages(messagesAut, "Author");
       console.log("Subscriber fetching next messages");
-      let messagesA = await util.fetchNextMessages(subA);
+      messagesA = await util.fetchNextMessages(subA);
       util.showMessages(messagesA, "SubA");
-      let messagesB = await util.fetchNextMessages(subB);
+      messagesB = await util.fetchNextMessages(subB);
       util.showMessages(messagesB, "SubB");
       let messagesC = await util.fetchNextMessages(subC);
       util.showMessages(messagesC, "SubC");
-
-
       // fetch latest messages or with user state
-      console.log("SubA states");
-      let stateSubA = saveStates(subA);
-      console.log("SubB states");
-      let stateSubB = saveStates(subB);
-      console.log("SubC states");
-      let stateSubC = saveStates(subC);
-      console.log("Auth states");
-      let stateSubAuth = saveStates(auth);
+      // console.log("Auth states");
+      // let stateSubAuth = util.showStates(auth);
     }
-  }
-
-  function saveStates(part) {
-    let currStates = util.fetchState(part);
-    console.log(currStates);
-    let states = {};
-    for (var i=0; i < currStates.length; i++) {
-      states[i] = {};
-      states[i]["id"] = currStates[i].identifier;
-      states[i]["link"] = currStates[i].link.toString();
-      states[i]["seq"] = currStates[i].seqNo;
-      states[i]["branch"] = currStates[i].branchNo;
-    }
-    console.log(JSON.stringify(states));
-    return states;
   }
 }
+
 
 main();

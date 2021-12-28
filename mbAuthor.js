@@ -23,7 +23,7 @@ module.exports = {
   makeAuthor,
   logChannel,
   parseAnnouncementLink,
-  receiveSubscription,
+  receiveSubscription
 }
 
 async function makeAuthor(client, filename) {

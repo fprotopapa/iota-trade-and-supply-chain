@@ -13,12 +13,14 @@ var util = require('./utils');
 module.exports = { 
   createAPI,
   updateAnnouncementLink,
-  getSubscribers
+  getSubscribers,
+  updateKeyloadLink
 };
 
 var announcementLink = null;
 var announcementLinkPub = null;
 var subscribers = {};
+var keyload = null;
 
 function updateAnnouncementLink(annLink, isPub) {
   if (isPub) {
@@ -26,6 +28,10 @@ function updateAnnouncementLink(annLink, isPub) {
   } else {
     announcementLink = annLink.toString();
   }
+}
+
+function updateKeyloadLink(keyloadLink) {
+    keyload = keyloadLink.toString();
 }
 
 function getSubscribers() {
@@ -69,6 +75,19 @@ function createAPI() {
       res.send();
     } else {
       res.status(403).send();
+    }  
+  });
+
+  rest.get('/key', (req, res) => {
+    let did = req.query.did;
+    if (util.verifyDID(did)) {
+      if (keyload === null) {
+        res.send(JSON.stringify('No keyload available.'));
+      } else {
+        res.send(JSON.stringify(keyload));
+      }
+    } else {
+       res.status(403).send();
     }  
   });
 

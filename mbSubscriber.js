@@ -25,7 +25,8 @@ module.exports = {
     getAnnouncementLink,
     makeSubLinkJson,
     getAuthorDID,
-    receiveKeyload
+    receiveKeyload,
+    getKeyloadLink
 }
 
 // Generate Subscriber
@@ -104,6 +105,21 @@ function getAnnouncementLink (url, port, protocol='https', link='/ann') {
         return response = {
             statusCode: e,
             body: 'Error getting Announcement'
+        };
+    }); 
+}
+
+function getKeyloadLink (url, port, protocol='https', link='/key/?did=') {
+    return util.getRequest(url, port, link, protocol).then((data) => {
+        const response = {
+            statusCode: 200,
+            body: data
+        };
+      return response;
+    }).catch(e => { 
+        return response = {
+            statusCode: e,
+            body: 'Error getting Keyload'
         };
     }); 
 }

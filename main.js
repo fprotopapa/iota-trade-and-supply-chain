@@ -4,15 +4,13 @@
 *  SPDX-License-Identifier: MIT
 *
 *  ToDo: 
-*        - Refactor way of loading existing instance -> use import and export
-*        - Store pwd etc with stronghold
-*        - Store or retrieve index to work with reloaded instances
-*        - Multi Branch
+*   - Send Keyload over rest api
 */
 var util = require('./utils');
 var author = require('./mbAuthor');
 var subs = require('./mbSubscriber');
 var api = require('./server');
+const { disabled } = require('express/lib/application');
 
 const DEBUG_SKIP_STREAMS = false;
 const DEBUG_SKIP_SENDING = false;
@@ -107,7 +105,7 @@ async function main() {
     let restAnnLinkStr = subs.getAnnouncementLink(restUrl, port, protocol, '/ann');
     await restAnnLinkStr.then(function(result) {
       let str = JSON.stringify(result.body).replace('"', '').replace(/"$/,'');
-      restAnnLink = util.parseAnnouncementLinkString(str);
+      restAnnLink = util.parseMsgLinkStrToAddress(str);
       console.log("-----------------------------------------");
       console.log("------ Announcement Link ----------------");
       console.log("-----------------------------------------");
@@ -118,7 +116,7 @@ async function main() {
     let restAnnLinkStrPub = subs.getAnnouncementLink(restUrl, port, protocol, '/annpub');
     await restAnnLinkStrPub.then(function(result) {
       let str = JSON.stringify(result.body).replace('"', '').replace(/"$/,'');
-      restAnnLinkPub = util.parseAnnouncementLinkString(str);
+      restAnnLinkPub = util.parseMsgLinkStrToAddress(str);
       console.log("-----------------------------------------");
       console.log("------ Public Announcement Link ---------");
       console.log("-----------------------------------------");
@@ -164,22 +162,20 @@ async function main() {
     console.log('Subscribers:' + JSON.stringify(actSubs));
     console.log('-------------------------------------------------------------------------------');
     // Register subscribers
-    let restSubLinkA = util.parseAnnouncementLinkString(actSubs["SubA"]["subLink"]);
-    let restSubLinkB = util.parseAnnouncementLinkString(actSubs["SubB"]["subLink"]);
+    let restSubLinkA = util.parseMsgLinkStrToAddress(actSubs["SubA"]["subLink"]);
+    let restSubLinkB = util.parseMsgLinkStrToAddress(actSubs["SubB"]["subLink"]);
     await author.receiveSubscription(restSubLinkA, auth);
     await author.receiveSubscription(restSubLinkB, auth);
     console.log('----------------------');
     console.log("Subscription processed");
     console.log('----------------------');
     // Distributing keyload
-    /*
-    Send over REST !!!!!!!!
-    */
     console.log('---------------');
     console.log("Sending Keyload");
     console.log('---------------');
     response = await auth.clone().send_keyload_for_everyone(announcementLink.copy());
     let keyload_link = response.link;
+    api.updateKeyloadLink(keyload_link);
     console.log('----------------------------- Keyload -------------------------------------------');
     console.log("Keyload message at: ", keyload_link.toString());
     console.log("Keyload message index: " + keyload_link.toMsgIndexHex());
@@ -194,6 +190,18 @@ async function main() {
 
       Subs -> publishing to private branch
     */
+    did = 1000;
+    link = '/key/?did=' + did;
+    keyloadReceived = subs.getKeyloadLink(restUrl, port, protocol, link);
+    await keyloadReceived.then(function(result) {
+      let str = JSON.stringify(result.body).replace('"', '').replace(/"$/,'');
+      console.log(str);
+      keyloadReceived = util.parseMsgLinkStrToAddress(str);
+      console.log("-----------------------------------------");
+      console.log("------ Keyload Link ---------------------");
+      console.log("-----------------------------------------");
+      console.log('Keyload Link recv: ' + str);
+    });
     if (!DEBUG_SKIP_SENDING) {
       console.log("---------------------------------------------");
       console.log("------ Author Public: Sending ---------------");
@@ -223,7 +231,7 @@ async function main() {
       console.log("------ Subscriber A: Sending ------------");
       console.log("-----------------------------------------");
       console.log("SubA sending signed packet to private SB");
-      let msgLink = keyload_link;
+      let msgLink = keyloadReceived;
       for (var x = 0; x < 1; x++) {
         msgLink = await util.sendSignedPacket(msgLink, subA, public_payloadA, masked_payloadA);
         console.log("Signed packet at: ", msgLink.toString());

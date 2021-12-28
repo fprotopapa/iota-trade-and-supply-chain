@@ -32,7 +32,7 @@ module.exports = {
     postRequest,
     verifyDID,
     getRestURL,
-    parseAnnouncementLinkString,
+    parseMsgLinkStrToAddress,
     fetchState,
     getEncryptPasswd,
     isEncryptedBinary,
@@ -297,8 +297,8 @@ function verifyDID(did) {
     return true;
 }
 
-function parseAnnouncementLinkString(announcementLinkStr) {
-    return streams.Address.parse(announcementLinkStr);
+function parseMsgLinkStrToAddress(MsgLinkStr) {
+    return streams.Address.parse(MsgLinkStr);
 }
 
 function fetchState(sender) {

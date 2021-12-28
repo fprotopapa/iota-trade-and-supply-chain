@@ -1,13 +1,13 @@
 {
   "env": {
     "nodeUrl": "HORNET_NODE_ADDRESS",
-    "restUrl": "REST_SERVER"
+    "restUrl": "REST_SERVER",
+    "authorPasswd": "AUTHOR_PASSWD"
   },
-  "author": {
-    "seed": "Eu6JNDQdDBQp7xm1El90WuX36ZaD3n7gixB0FzllTowkjvJ86w89HqNYPAeyRIKNyMGYkByN",
-    "setSeed": true,
-    "announcementLink": "ca30a28baab3f8911dd12f7eda306cd69bb9d76a813662f319884da67675736b0000000000000000:1a9bc54205cdfbd5cdee240c",
-    "channelAddress": "ca30a28baab3f8911dd12f7eda306cd69bb9d76a813662f319884da67675736b0000000000000000",
-    "channelType": 1
+  "caller": {
+    "setSeed": false
+  },
+  "dir": {
+    "bin": "binary_instance"
   }
 }

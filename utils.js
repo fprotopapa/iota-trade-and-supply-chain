@@ -4,15 +4,14 @@
 *  SPDX-License-Identifier: MIT
 *
 *  ToDo: 
-*        - Refactor way of loading existing instance -> use import and *        - Store pwd etc with stronghold
 *        - Store or retrieve index to work with reloaded instances
-*        - Multi Branch
 */
 
 const streams = require('./node/streams');
 streams.set_panic_hook();
 
 const fs = require('fs');
+const path = require('path');
 const configPath = './config/default.json';
 const config = require(configPath);
 const https = require('https');
@@ -34,7 +33,11 @@ module.exports = {
     verifyDID,
     getRestURL,
     parseAnnouncementLinkString,
-    fetchState
+    fetchState,
+    getEncryptPasswd,
+    isEncryptedBinary,
+    buildPath,
+    checkFileExtension
 }
 
 function postRequest(url, port, path, dataJson, protocol='https') {
@@ -197,6 +200,44 @@ function makeSeed(size) {
     return seed;
 }
 
+function getEncryptPasswd() {
+    // Read env variable name from config file
+    encPwdEnv = config.env.authorPasswd; 
+    // Get node url from environment, if not defined fall back to default
+    let encPwd = process.env[encPwdEnv];
+    if (encPwd === undefined) {
+        encPwd = "123456";
+    }
+    return encPwd;
+}
+
+function checkFileExtension(filename, defaultExtension) {
+    let ext = path.extname(filename);
+    if (!ext) {
+        filename = filename + defaultExtension;
+    }
+    return filename;
+}
+
+function buildPath(pathToDir) {
+    let dirWD = path.resolve(__dirname);
+    return path.join(dirWD, pathToDir);
+}
+
+function isEncryptedBinary(filename, dirPath) {
+    filename = checkFileExtension(filename, '.bin');
+    let ext = path.extname(filename);
+    // Get list of saved instances
+    var files = fs.readdirSync(dirPath);
+    let foundInstances = files.filter(e => path.extname(e) === ext);
+    // Check for existing author seed
+    let isInstance = false;
+    if (foundInstances.filter(e => path.basename(e) === filename).length) {
+        isInstance = true;
+    }
+    return isInstance;
+}
+
 function getNodeURL() {
     // Read env variable name from config file
     nodeUrlEnv = config.env.nodeUrl; 
@@ -205,7 +246,7 @@ function getNodeURL() {
     if (nodeUrl === undefined) {
         nodeUrl = "https://chrysalis-nodes.iota.org";
     }
-    return nodeUrl
+    return nodeUrl;
 }
 
 function getRestURL() {

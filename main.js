@@ -15,7 +15,7 @@ var subs = require('./mbSubscriber');
 var api = require('./server');
 
 const DEBUG_SKIP_STREAMS = false;
-const DEBUG_SKIP_SENDING = false;
+const DEBUG_SKIP_SENDING = true;
 
 
 async function main() {
@@ -37,7 +37,7 @@ async function main() {
 
     const client = await util.makeClient();
     // Create channel/ Open channel
-    let auth = await author.makeAuthor(client);
+    let auth = await author.makeAuthor(client, 'author');
     let announcementLink = author.parseAnnouncementLink(auth);
     // Make announcement link avaiable
     api.updateAnnouncementLink(announcementLink);
@@ -57,10 +57,9 @@ async function main() {
       Subscriber -> receives annnouncement -> subscribes to channel
     */
     // Generate subscriber
-    nodeUrl = util.getNodeURL();
-    subA = subs.generateNewSubscriber(nodeUrl, util.makeSeed(81));
-    subB = subs.generateNewSubscriber(nodeUrl, util.makeSeed(81));
-    subC = subs.generateNewSubscriber(nodeUrl, util.makeSeed(81));
+    subA = subs.makeSubscriber(client, 'subA');
+    subB = subs.makeSubscriber(client, 'subB.bin');
+    subC = subs.makeSubscriber(client, 'subC');
     // Verify author
     let authorDid = subs.getAuthorDID(restUrl, port, protocol);
     authorDid.then(function(result) {

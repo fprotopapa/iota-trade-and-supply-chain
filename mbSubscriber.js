@@ -4,23 +4,21 @@
 *  SPDX-License-Identifier: MIT
 *
 *  ToDo: 
-*        - Refactor way of loading existing instance -> use import and export
-*        - Store pwd etc with stronghold
 *        - Store or retrieve index to work with reloaded instances
-*        - Multi Branch
 */
 
 const streams = require('./node/streams');
 streams.set_panic_hook();
 
 const fs = require('fs');
+const path = require('path');
 const configPath = './config/default.json';
 const config = require(configPath);
 
 var util = require('./utils');
 
 module.exports = {
-    generateNewSubscriber,
+    makeSubscriber,
     subscripeToChannel,
     receiveAnnouncement,
     sendSubscribtionLink,
@@ -31,9 +29,35 @@ module.exports = {
 }
 
 // Generate Subscriber
-function generateNewSubscriber(nodeUrl, seed) {
-    const options = new streams.SendOptions(nodeUrl);
-    return new streams.Subscriber(seed, options.clone());
+function makeSubscriber(client, filename) {
+    // Generate Subscriber
+    // Check for existing subscriber
+    filename = util.checkFileExtension(filename, '.bin');
+    let subPasswd = util.getEncryptPasswd();
+    let dirPath = util.buildPath(config.dir.bin);
+    let isSubInstance = util.isEncryptedBinary(filename, dirPath);
+    if (!isSubInstance || config.caller.setSeed) {
+        // Generate new seed 
+        var seed = util.makeSeed(81);
+        console.log("New seed for subscriber created.");
+        // Generating subscriber
+        var sub = streams.Subscriber.fromClient(
+                                                streams.StreamsClient.fromClient(client), 
+                                                seed);
+        
+        let expSub = sub.clone().export(subPasswd);
+        fs.writeFileSync(path.join(dirPath, filename), expSub, 'binary');
+        console.log("Subscriber instance exported: ", filename);
+        } else {
+        // Load existing seed
+        impSub = new Uint8Array(fs.readFileSync(path.join(dirPath, filename)));
+        var sub = streams.Subscriber.import(
+                                            streams.StreamsClient.fromClient(client), 
+                                            impSub, 
+                                            subPasswd);
+        console.log("Loaded subscriber instance from binary.");
+        }
+    return sub;
 }
 
 // Subscribe to channel -> Return subscribtion link

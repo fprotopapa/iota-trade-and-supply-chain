@@ -4,16 +4,14 @@
 *  SPDX-License-Identifier: MIT
 *
 *  ToDo: 
-*        - Refactor way of loading existing instance -> use import and export
-*        - Store pwd etc with stronghold
 *        - Store or retrieve index to work with reloaded instances
-*        - Multi Branch
 */
 
 const streams = require('./node/streams');
 streams.set_panic_hook();
 
 const fs = require('fs');
+const path = require('path');
 const configPath = './config/default.json';
 const config = require(configPath);
 
@@ -28,37 +26,36 @@ module.exports = {
   receiveSubscription,
 }
 
-async function makeAuthor(client) {
+async function makeAuthor(client, filename) {
     // Generate author
-    // Check for existing author seed
-    if ((config.author.seed === null) || config.author.setSeed) {
-        // Generate new seed and save to config.json
+    // Check for existing author
+    filename = util.checkFileExtension(filename, '.bin');
+    let authorPasswd = util.getEncryptPasswd();
+    let dirPath = util.buildPath(config.dir.bin);
+    let isAuthorInstance = util.isEncryptedBinary(filename, dirPath);
+    if (!isAuthorInstance || config.caller.setSeed) {
+        // Generate new seed 
         var seed = util.makeSeed(81);
-        config.author.seed = seed;
         console.log("New seed for author created.");
         // Generating author for new channel
-        var author = streams.Author.fromClient(streams.StreamsClient.fromClient(client), seed, streams.ChannelType.MultiBranch);
-        config.author.channelAddress = author.channel_address();
-        config.author.channelType = streams.ChannelType.MultiBranch;
+        var author = streams.Author.fromClient(
+                                              streams.StreamsClient.fromClient(client), 
+                                              seed, 
+                                              streams.ChannelType.SingleBranch);
         // Send announcment and get link
         let response = await author.clone().send_announce();
-        let announcementLink = response.link;
-        let announcementLinkStr = announcementLink.toString();
-        // Update config.json
-        config.author.announcementLink = announcementLinkStr;
         
-        util.writeJsonFile(config, configPath);
+        let expAuthor = author.clone().export(authorPasswd);
+        fs.writeFileSync(path.join(dirPath, filename), expAuthor, 'binary');
+        console.log("Author instance exported: ", filename);
       } else {
         // Load existing seed
-        var seed = config.author.seed;
-        console.log("Existing seed for author loaded.");
-        // Generating author for existing channel
-        let announcementLinkStr = config.author.announcementLink;
-        let announcementLink = streams.Address.parse(announcementLinkStr)
-        let channelType = config.author.channelType;
-        const options = new streams.SendOptions(nodeUrl);
-        // Recover author !! announcementLink is freed !!
-        var author = await streams.Author.recover(seed, announcementLink, channelType, options);  
+        impAuthor = new Uint8Array(fs.readFileSync(path.join(dirPath, filename)));
+        var author = streams.Author.import(
+                                        streams.StreamsClient.fromClient(client), 
+                                        impAuthor, 
+                                        authorPasswd);
+        console.log("Loaded author instance from binary.");
       }
       return author;
 }

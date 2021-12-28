@@ -1,13 +1,13 @@
 {
   "env": {
     "nodeUrl": "HORNET_NODE_ADDRESS",
-    "restUrl": "REST_SERVER"
+    "restUrl": "REST_SERVER",
+    "authorPasswd": "AUTHOR_PASSWD"
   },
   "author": {
-    "seed": null,
-    "setSeed": true,
-    "announcementLink": null,
-    "channelAddress": null,
-    "channelType": null
+    "setSeed": true
+  },
+  "dir": {
+    "bin": "binary_instance"
   }
 }

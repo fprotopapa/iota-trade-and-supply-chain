@@ -9,6 +9,7 @@
 
 const streams = require('./node/streams');
 streams.set_panic_hook();
+const identity = require('./identity/identity');
 
 const fs = require('fs');
 const path = require('path');
@@ -39,7 +40,8 @@ module.exports = {
     buildPath,
     checkFileExtension,
     fetchLatestLinkSB,
-    showStates
+    showStates,
+    getIdentityVPObject
 }
 
 function showStates(caller) {
@@ -294,7 +296,15 @@ async function makeClient() {
 }
 
 function verifyDID(did) {
-    return true;
+    // Add check for Authority
+    return identity.checkVPJson(did);
+}
+
+async function getIdentityVPObject(filename) {
+    //Read VP object from JSON file
+    dirPath = path.join(path.resolve(__dirname), 'identity', 'signed_credentials');
+    let weakholdObject = JSON.parse(fs.readFileSync(path.join(dirPath, filename)));
+    return weakholdObject;
 }
 
 function parseMsgLinkStrToAddress(MsgLinkStr) {

@@ -92,7 +92,7 @@ function createAPI() {
   });
 
   rest.get('/did', (req, res) => {
-    res.send(JSON.stringify('author\'s DID'));
+    res.send(util.getIdentityVPObject('offlineVerifiablePresentationAuthor.json'));
   });
 
   return rest;

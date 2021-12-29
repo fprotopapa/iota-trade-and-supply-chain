@@ -4,7 +4,7 @@
 *  SPDX-License-Identifier: MIT
 *
 *  ToDo: 
-*   - Send Keyload over rest api
+*
 */
 var util = require('./utils');
 var author = require('./mbAuthor');
@@ -13,7 +13,7 @@ var api = require('./server');
 const { disabled } = require('express/lib/application');
 
 const DEBUG_SKIP_STREAMS = false;
-const DEBUG_SKIP_SENDING = false;
+const DEBUG_SKIP_SENDING = true;
 
 
 async function main() {
@@ -137,14 +137,15 @@ async function main() {
       Subscriber -> receives annnouncement -> subscribes to channel
     */
     // Client send subscribtion link to author (Sub Link, DID, Name)
-    let subDataA = subs.makeSubLinkJson(subLinkA.toString(), '111111111', 'SubA');
+    did = util.getIdentityVPObject('offlineVerifiablePresentationCargo.json');
+    let subDataA = subs.makeSubLinkJson(subLinkA.toString(), did, 'SubA');
     let responseA = subs.sendSubscribtionLink(restUrl, port, subDataA, protocol)
     responseA.then(function(result) {
       console.log('----------------');
       console.log('SubA link posted');
       console.log('----------------');
     });
-    let subDataB = subs.makeSubLinkJson(subLinkB.toString(), '222222222', 'SubB');
+    let subDataB = subs.makeSubLinkJson(subLinkB.toString(), did, 'SubB');
     let responseB = subs.sendSubscribtionLink(restUrl, port, subDataB, protocol)
     responseB.then(function(result) {
       console.log('----------------');

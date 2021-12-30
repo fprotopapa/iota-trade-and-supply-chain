@@ -14,13 +14,19 @@ module.exports = {
   createAPI,
   updateAnnouncementLink,
   getSubscribers,
-  updateKeyloadLink
+  updateKeyloadLink,
+  updateDID
 };
 
 var announcementLink = null;
 var announcementLinkPub = null;
 var subscribers = {};
 var keyload = null;
+var didAuthor = null;
+
+async function updateDID() {
+  didAuthor = await util.getIdentityVPObject('offlineVerifiablePresentationAuthor.json');
+}
 
 function updateAnnouncementLink(annLink, isPub) {
   if (isPub) {
@@ -78,8 +84,10 @@ function createAPI() {
     }  
   });
 
-  rest.get('/key', (req, res) => {
-    let did = req.query.did;
+  rest.post('/key', (req, res) => {
+    let did = req.body;
+    console.log("server -------------")
+    console.log(did);
     if (util.verifyDID(did)) {
       if (keyload === null) {
         res.send(JSON.stringify('No keyload available.'));
@@ -92,7 +100,11 @@ function createAPI() {
   });
 
   rest.get('/did', (req, res) => {
-    res.send(util.getIdentityVPObject('offlineVerifiablePresentationAuthor.json'));
+    if (didAuthor === null) {
+      res.send(JSON.stringify('No DID available.'));
+    } else {
+      res.send(didAuthor);
+    }
   });
 
   return rest;

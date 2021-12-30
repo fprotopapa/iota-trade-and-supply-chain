@@ -81,19 +81,6 @@ async function receiveAnnouncement(announcementLink, subscriber) {
     await subscriber.clone().receive_announcement(announcementLink.copy());
 }    
 
-function sendSubscribtionLink(url, port, dataJson, protocol='https') {
-    return util.postRequest(url, port, '/sub', dataJson, protocol).then((status) => {
-        const response = {
-            statusCode: status
-        };
-    return response;
-    }).catch(e => { 
-        return response = {
-            statusCode: e
-        };
-    }); 
-}
-
 function getAnnouncementLink (url, port, protocol='https', link='/ann') {
     return util.getRequest(url, port, link, protocol).then((data) => {
         const response = {
@@ -109,11 +96,24 @@ function getAnnouncementLink (url, port, protocol='https', link='/ann') {
     }); 
 }
 
-function getKeyloadLink (url, port, protocol='https', link='/key/?did=') {
-    return util.getRequest(url, port, link, protocol).then((data) => {
+function sendSubscribtionLink(url, port, dataJson, protocol='https') {
+    return util.postRequest(url, port, '/sub', dataJson, protocol).then((status) => {
         const response = {
-            statusCode: 200,
-            body: data
+            statusCode: status.statusCode
+        };
+    return response;
+    }).catch(e => { 
+        return response = {
+            statusCode: e
+        };
+    }); 
+}
+
+function getKeyloadLink (url, port, dataJson, protocol='https') {
+    return util.postRequest(url, port, '/key', dataJson, protocol).then((r) => {
+        const response = {
+            statusCode: r.statusCode,
+            body: r.body
         };
       return response;
     }).catch(e => { 

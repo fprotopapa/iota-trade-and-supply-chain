@@ -90,15 +90,18 @@ function postRequest(url, port, path, dataJson, protocol='https') {
         if (res.statusCode < 200 || res.statusCode >= 300) {
                 return reject(res.statusCode);
             }
+            var body = '';
             res.on('data', function(chunk) {
-                process.stdout.write(chunk);
+                body += chunk;
+            }); 
+            res.on('end', function() {
+                let response = {statusCode: res.statusCode, body: body};
+                resolve(response);
             });
-            resolve(res.statusCode);
         });
         req.on('error', (e) => {
         reject(e.message);
         });
-    //req.status(200);
     req.write(dataJson);
     req.end();
     });
@@ -112,7 +115,6 @@ function getRequest(url, port, path, protocol='https') {
             path: path,
             method: 'GET'
         }
-
         let rest = https;
         if (protocol !== 'https') {
             rest = http;
@@ -296,7 +298,6 @@ async function makeClient() {
 }
 
 function verifyDID(did) {
-    // Add check for Authority
     return identity.checkVPJson(did);
 }
 

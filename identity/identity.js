@@ -17,7 +17,6 @@ const { Document, KeyType, Client, Config, VerifiableCredential } = require("@io
 const { DID, KeyPair, VerificationMethod, Digest, KeyCollection, VerifiablePresentation } = require("@iota/identity-wasm/node");
 const { Network, defaultNodeURL, explorerURL } = require('@iota/identity-wasm/node');
 const fs = require('fs').promises;
-//const { writeFileSync, readFileSync } = require('fs');
 
 module.exports = {
     setClientConfig,
@@ -270,7 +269,9 @@ async function checkVPJson(didJson) {
     let signedVp = VerifiablePresentation.fromJSON(didJson);
     //Check if the credential is verifiable
     const result = await client.checkPresentation(signedVp.toString());
+    console.log("--------------------- Identity Check ---------------------------")
     console.log(`Verifiable presentation verification result: ${result.verified}`);
+    console.log("----------------------------------------------------------------")
     return result.verified;
 }
 

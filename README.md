@@ -35,5 +35,8 @@ Subscriber:
 
 ### Identity
 
+```
+npm install ./identity
+```
 
 

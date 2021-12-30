@@ -77,7 +77,6 @@ function createAPI() {
       subscribers[name] = {};
       subscribers[name]['subLink'] = sublink;
       subscribers[name]['did'] = did;
-      //console.log(subscribers);
       res.send();
     } else {
       res.status(403).send();
@@ -86,8 +85,6 @@ function createAPI() {
 
   rest.post('/key', (req, res) => {
     let did = req.body;
-    console.log("server -------------")
-    console.log(did);
     if (util.verifyDID(did)) {
       if (keyload === null) {
         res.send(JSON.stringify('No keyload available.'));

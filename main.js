@@ -19,10 +19,10 @@ var FF_STATE = 0;
 var CONSIGNEE_STATE = 0;
 
 const DEBUG_SKIP_STREAMS = false;
-const DEBUG_SKIP_SENDING = true;
+const DEBUG_SKIP_SENDING = false;
 const AUTHOR = true;
 const SUBSCRIBER = true;
-const CARGO = false;
+const CARGO = true;
 const SIMSUBS = true;
 
 async function main() {
@@ -153,7 +153,7 @@ async function main() {
         }
         if (CARGO) {
           await subs.receiveAnnouncement(restAnnLink, subCargo);
-          let subLinkCargo = await subs.subscripeToChannel(restAnnLink, subCargo);
+          var subLinkCargo = await subs.subscripeToChannel(restAnnLink, subCargo);
         }
 
 
@@ -195,7 +195,7 @@ async function main() {
           var didCargo = await util.getIdentityVPObject('offlineVerifiablePresentationCargo.json');
           let subDataCargo = subs.makeSubLinkJson(subLinkCargo.toString(), didCargo, 'Cargo');
           let responseD = subs.sendSubscribtionLink(restUrl, port, subDataCargo, protocol);
-          responseC.then(function(result) {
+          responseD.then(function(result) {
             console.log('----------------');
             console.log('Cargo link posted');
             console.log('----------------');
@@ -270,6 +270,8 @@ async function main() {
       if (AUTHOR) {
         var keyloadPublic = announcementLinkPub;
       }
+      const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+      
       while (true) {
         if (AUTHOR) {
           let messagesAuth = await authorReceive(auth);
@@ -277,20 +279,18 @@ async function main() {
         }
         if (SUBSCRIBER && SIMSUBS) {
           let messages = [];
-          messages = await subscriberReceiveMessages(subA, 'Subscribers');
-          if (messages.length > 0) {
-            await simulateShipper(messages);
-            await simulateFreigthF(messages);
-            await simulateConsignee(messages);
-          }
+          messages = await subscriberReceiveMessages(subShipper, 'Subscribers');
+          //console.log("Messages: ", messages)
+          await simulateConsignee(subConsignee, messages);
+          await simulateShipper(subShipper, messages);
+          await simulateFreigthF(subFreightF, messages);
         }
         if (SUBSCRIBER && CARGO) {
           let messages = [];
-          messages = await subscriberReceiveMessages(subA, 'Cargo');
-          if (messages.length > 0) {
-            await simulateCargo(messages);
-          }
+          messages = await subscriberReceiveMessages(subCargo, 'Cargo');
+          await simulateCargo(subCargo, messages);
         }
+        await delay(5000);
       }
     }
   }
@@ -327,7 +327,7 @@ async function sendFilteredAuthMessages(caller, messages, keyloadLink) {
   return keyload;
 }
 
-async function simulateCargo(messages) {
+async function simulateCargo(caller, messages) {
   if (CARGO_STATE === 0) {
     for (var i = 0; i < messages.length; i++) { 
       let msgJson = JSON.parse(messages[i]);
@@ -342,7 +342,7 @@ async function simulateCargo(messages) {
             temperature: "20C"
           });
           CARGO_STATE = 1;
-          await subscriberPrivateSend(subCargo, respJson, "Cargo");
+          await subscriberPrivateSend(caller, respJson, "Cargo");
         } 
       }
     }
@@ -372,11 +372,11 @@ async function simulateCargo(messages) {
       temperature: temp,
     });
     CARGO_STATE++;
-    await subscriberPrivateSend(subCargo, respJson, "Cargo");
+    await subscriberPrivateSend(caller, respJson, "Cargo");
   }
 }
 
-async function simulateFreigthF(messages) {
+async function simulateFreigthF(caller, messages) {
   if (FF_STATE === 0) {
     for (var i = 0; i < messages.length; i++) { 
       let msgJson = JSON.parse(messages[i]);
@@ -392,7 +392,7 @@ async function simulateFreigthF(messages) {
             condition: "Good"
           });
           FF_STATE = 2;
-          await subscriberPrivateSend(subFreightF, respJson, "Freight Forwarder");
+          await subscriberPrivateSend(caller, respJson, "Freight Forwarder");
         } 
         if (msgJson.code === 222) { // Message from Cargo
           let port = '';
@@ -419,7 +419,7 @@ async function simulateFreigthF(messages) {
             id: "1235363674",
             status: "Shipping"
           });
-          await subscriberPrivateSend(subFreightF, respJson, "Freight Forwarder");
+          await subscriberPrivateSend(caller, respJson, "Freight Forwarder");
         }
       }
     }
@@ -433,7 +433,7 @@ async function simulateFreigthF(messages) {
       id: "1235363674",
       status: "Delivered"
     });
-    await subscriberPrivateSend(subFreightF, respJson, "Freight Forwarder");
+    await subscriberPrivateSend(caller, respJson, "Freight Forwarder");
   } else if (FF_STATE === 2) {
     FF_STATE = 0;
     let respJson = JSON.stringify({
@@ -446,14 +446,14 @@ async function simulateFreigthF(messages) {
       import: "importClearanceURL",
       export: "exportClearanceURL"
     });
-    await subscriberPrivateSend(subFreightF, respJson, "Freight Forwarder");
+    await subscriberPrivateSend(caller, respJson, "Freight Forwarder");
   } 
 }
 
-async function simulateConsignee(messages) {
-  if (CONSIGNEE_STATE > 0) {
+async function simulateConsignee(caller, messages) {
+  if ((CONSIGNEE_STATE > 0) && (messages.length > 0)) {
     for (var i = 0; i < messages.length; i++) { 
-      let msgJson = JSON.parse(messages[i]);
+      let msgJson = JSON.parse(messages[i].replace(/\\/g, ""));
       if (msgJson.code === 333) { // Message from Freight Forwarder
         if (msgJson.status === "Delivered") {
           let respJson = JSON.stringify({
@@ -464,11 +464,11 @@ async function simulateConsignee(messages) {
             id: "1235363674",
             status: "Accepted"
           });
-          await subscriberPrivateSend(subConsignee, respJson, "Consignee");
+          await subscriberPrivateSend(caller, respJson, "Consignee");
         }
       }
     }
-  } else if (CONSIGNEE_STATE == 0) {
+  } else if (CONSIGNEE_STATE === 0) {
     CONSIGNEE_STATE++;
     let respJson = JSON.stringify({
       name: "Consignee",
@@ -478,14 +478,14 @@ async function simulateConsignee(messages) {
       id: "1235363674",
       status: "Ordered"
     });
-    await subscriberPrivateSend(subConsignee, respJson, "Consignee");
+    await subscriberPrivateSend(caller, respJson, "Consignee");
   }
 }
 
-async function simulateShipper(messages) {
-  if (SHIPPER_STATE > 0) {
+async function simulateShipper(caller, messages) {
+  if ((SHIPPER_STATE === 0) && (messages.length > 0)) {
     for (var i = 0; i < messages.length; i++) { 
-      let msgJson = JSON.parse(messages[i]);
+      let msgJson = JSON.parse(messages[i]); 
       if (msgJson.code === 444) { // Message from Consignee
         if (msgJson.status === "Ordered") {
           SHIPPER_STATE = 1;
@@ -496,7 +496,7 @@ async function simulateShipper(messages) {
             time: "2021-12-01T12:00",
             status: "Start"
           });
-          await subscriberPrivateSend(subShipper, respJson, "Shipper");
+          await subscriberPrivateSend(caller, respJson, "Shipper");
         }
       }
     }
@@ -517,7 +517,7 @@ async function simulateShipper(messages) {
         time: timestamp,
         status: prod
       });
-      await subscriberPrivateSend(subShipper, respJson, "Shipper");
+      await subscriberPrivateSend(caller, respJson, "Shipper");
       SHIPPER_STATE++;
     }
 }
@@ -527,7 +527,7 @@ async function authorReceive(author) {
   console.log("Author fetching next messages");
   console.log("-----------------------------");
   let messagesAut = await util.fetchNextMessages(author);
-  let messagesStr = getMessageContent(messagesAut, "Author");
+  let messageStr = getMessageContent(messagesAut, "Author");
   return messageStr;
 }
 
@@ -562,7 +562,7 @@ async function subscriberPrivateSend(sub, msgJson, name) {
   let keyloadReceived = await util.fetchLatestLinkSB(sub, name);
   // Signed packet
   let public_payload = util.toBytes("");
-  let masked_payload = util.toBytes(JSON.stringify(msgJson));
+  let masked_payload = util.toBytes(msgJson);
   console.log("-----------------------------------------");
   console.log("------ Subscriber ", name, ": Sending ------------");
   console.log("-----------------------------------------");
@@ -577,7 +577,7 @@ async function subscriberPrivateSend(sub, msgJson, name) {
 // Show fetched messages
 function getMessageContent(messages, subName) {
   console.log("Message for " + subName);
-  messagesStr = [];
+  let messageStr = [];
   for (var i = 0; i < messages.length; i++) {
     let next = messages[i];
     for (var j = 0; j < next.length; j++) {
@@ -585,12 +585,12 @@ function getMessageContent(messages, subName) {
     if (next[j].message == null) {
         console.log("Message undefined");
     } else {
-        messageStr.push(fromBytes(next[j].message.get_masked_payload()));
+        messageStr.push(util.fromBytes(next[j].message.get_masked_payload()));
         console.log(
         "Public: ",
-        fromBytes(next[j].message.get_public_payload()),
+        util.fromBytes(next[j].message.get_public_payload()),
         "\tMasked: ",
-        fromBytes(next[j].message.get_masked_payload())
+        util.fromBytes(next[j].message.get_masked_payload())
         );
       }
     }

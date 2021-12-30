@@ -23,6 +23,7 @@ const DEBUG_SKIP_SENDING = true;
 const AUTHOR = true;
 const SUBSCRIBER = true;
 const CARGO = false;
+const SIMSUBS = true;
 
 async function main() {
   /*
@@ -96,10 +97,15 @@ async function main() {
           SubC is subscribed but not accepted to private channel
           SubD listens to publich channel
         */
-        var subA = subs.makeSubscriber(client, 'subA');
-        var subB = subs.makeSubscriber(client, 'subB.bin');
-        var subC = subs.makeSubscriber(client, 'subC');
-        var subD = subs.makeSubscriber(client, 'subDPub');
+       if (SIMSUBS) {
+        var subFreightF = subs.makeSubscriber(client, 'FreightF');
+        var subConsignee = subs.makeSubscriber(client, 'Consignee');
+        var subShipper = subs.makeSubscriber(client, 'Shipper');
+        var subPublic = subs.makeSubscriber(client, 'PublicSubscriber');
+       } 
+       if (CARGO) {
+        var subCargo = subs.makeSubscriber(client, 'Cargo');
+       }
         // Verify author
         let authorDid = subs.getAuthorDID(restUrl, port, protocol);
         authorDid.then(function(result) {
@@ -135,42 +141,72 @@ async function main() {
           console.log("-----------------------------------------");
           console.log('Ann Link Pub recv: ' + str);
         });
+        if (SIMSUBS) {
         // Receive and subscribe to channel
-        await subs.receiveAnnouncement(restAnnLink, subA);
-        await subs.receiveAnnouncement(restAnnLink, subB);
-        await subs.receiveAnnouncement(restAnnLink, subC);
-        await subs.receiveAnnouncement(restAnnLinkPub, subD);
-        let subLinkA = await subs.subscripeToChannel(restAnnLink, subA);
-        let subLinkB = await subs.subscripeToChannel(restAnnLink, subB);
-        let subLinkC = await subs.subscripeToChannel(restAnnLink, subC);
+        await subs.receiveAnnouncement(restAnnLink, subFreightF);
+        await subs.receiveAnnouncement(restAnnLink, subConsignee);
+        await subs.receiveAnnouncement(restAnnLink, subShipper);
+        await subs.receiveAnnouncement(restAnnLinkPub, subPublic);
+        var subLinkFreightF = await subs.subscripeToChannel(restAnnLink, subFreightF);
+        var subLinkConsignee = await subs.subscripeToChannel(restAnnLink, subConsignee);
+        var subLinkShipper = await subs.subscripeToChannel(restAnnLink, subShipper);
+        }
+        if (CARGO) {
+          await subs.receiveAnnouncement(restAnnLink, subCargo);
+          let subLinkCargo = await subs.subscripeToChannel(restAnnLink, subCargo);
+        }
+
 
         /*
           Author receives subscribtions & sends out keyload (needed to attach messages)
 
           Subscriber -> receives annnouncement -> subscribes to channel
         */
-        // Client send subscribtion link to author (Sub Link, DID, Name)
-        let did = await util.getIdentityVPObject('offlineVerifiablePresentationCargo.json');
-        let subDataA = subs.makeSubLinkJson(subLinkA.toString(), did, 'SubA');
-        let responseA = subs.sendSubscribtionLink(restUrl, port, subDataA, protocol)
-        responseA.then(function(result) {
-          console.log('----------------');
-          console.log('SubA link posted');
-          console.log('----------------');
-        });
-        let subDataB = subs.makeSubLinkJson(subLinkB.toString(), did, 'SubB');
-        let responseB = subs.sendSubscribtionLink(restUrl, port, subDataB, protocol)
-        responseB.then(function(result) {
-          console.log('----------------');
-          console.log('SubB link posted');
-          console.log('----------------');
-        });
-    }
+        if (SIMSUBS) {
+          var didShipper = await util.getIdentityVPObject('offlineVerifiablePresentationShipper.json');
+          let subDataShipper = subs.makeSubLinkJson(subLinkShipper.toString(), didShipper, 'Shipper');
+
+          var didConsignee = await util.getIdentityVPObject('offlineVerifiablePresentationConsignee.json');
+          let subDataConsignee = subs.makeSubLinkJson(subLinkConsignee.toString(), didConsignee, 'Consignee');
+
+          var didFreightF = await util.getIdentityVPObject('offlineVerifiablePresentationFreightForwarder.json');
+          let subDataFreightF = subs.makeSubLinkJson(subLinkFreightF.toString(), didFreightF, 'FreightForwarder');
+
+          let responseA = subs.sendSubscribtionLink(restUrl, port, subDataShipper, protocol);
+          responseA.then(function(result) {
+            console.log('----------------');
+            console.log('Shipper link posted');
+            console.log('----------------');
+          });
+          let responseB = subs.sendSubscribtionLink(restUrl, port, subDataConsignee, protocol);
+          responseB.then(function(result) {
+            console.log('----------------');
+            console.log('Consignee link posted');
+            console.log('----------------');
+          });
+          let responseC = subs.sendSubscribtionLink(restUrl, port, subDataFreightF, protocol);
+          responseC.then(function(result) {
+            console.log('----------------');
+            console.log('Freight Forwarder link posted');
+            console.log('----------------');
+          });
+        }
+        if (CARGO) {
+          var didCargo = await util.getIdentityVPObject('offlineVerifiablePresentationCargo.json');
+          let subDataCargo = subs.makeSubLinkJson(subLinkCargo.toString(), didCargo, 'Cargo');
+          let responseD = subs.sendSubscribtionLink(restUrl, port, subDataCargo, protocol);
+          responseC.then(function(result) {
+            console.log('----------------');
+            console.log('Cargo link posted');
+            console.log('----------------');
+          });
+        }
+      }
 
     if (AUTHOR) {
       // Get subscribed clients
       var actSubs = {};
-      while(Object.keys(actSubs).length === 0) {
+      while((Object.keys(actSubs).length === 0) && (Object.keys(actSubs).length < 4)) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         subscribers = api.getSubscribers();
         actSubs = JSON.parse(JSON.stringify(subscribers));
@@ -179,10 +215,14 @@ async function main() {
       console.log('Subscribers:' + JSON.stringify(actSubs));
       console.log('-------------------------------------------------------------------------------');
       // Register subscribers
-      let restSubLinkA = util.parseMsgLinkStrToAddress(actSubs["SubA"]["subLink"]);
-      let restSubLinkB = util.parseMsgLinkStrToAddress(actSubs["SubB"]["subLink"]);
-      await author.receiveSubscription(restSubLinkA, auth);
-      await author.receiveSubscription(restSubLinkB, auth);
+      let restSubLinkShipper = util.parseMsgLinkStrToAddress(actSubs["Shipper"]["subLink"]);
+      let restSubLinkConsignee = util.parseMsgLinkStrToAddress(actSubs["Consignee"]["subLink"]);
+      let restSubLinkFreightF = util.parseMsgLinkStrToAddress(actSubs["FreightForwarder"]["subLink"]);
+      let restSubLinkCargo = util.parseMsgLinkStrToAddress(actSubs["Cargo"]["subLink"]);
+      await author.receiveSubscription(restSubLinkShipper, auth);
+      await author.receiveSubscription(restSubLinkConsignee, auth);
+      await author.receiveSubscription(restSubLinkFreightF, auth);
+      await author.receiveSubscription(restSubLinkCargo, auth);
       console.log('----------------------');
       console.log("Subscription processed");
       console.log('----------------------');
@@ -208,7 +248,12 @@ async function main() {
 
         Subs -> publishing to private branch
       */
-      did = await util.getIdentityVPObject('offlineVerifiablePresentationCargo.json');
+     let did = '';
+     if (CARGO) {
+      did = didCargo;
+     } else {
+      did = didShipper;
+     }
       let didJson = JSON.stringify(did);
       keyloadReceived = subs.getKeyloadLink(restUrl, port, didJson, protocol);
       await keyloadReceived.then(function(result) {
@@ -230,7 +275,7 @@ async function main() {
           let messagesAuth = await authorReceive(auth);
           keyloadPublic = await sendFilteredAuthMessages(authPub, messagesAuth, keyloadPublic);
         }
-        if (SUBSCRIBER && (!CARGO)) {
+        if (SUBSCRIBER && SIMSUBS) {
           let messages = [];
           messages = await subscriberReceiveMessages(subA, 'Subscribers');
           if (messages.length > 0) {
@@ -238,7 +283,8 @@ async function main() {
             await simulateFreigthF(messages);
             await simulateConsignee(messages);
           }
-        } else if (CARGO) {
+        }
+        if (SUBSCRIBER && CARGO) {
           let messages = [];
           messages = await subscriberReceiveMessages(subA, 'Cargo');
           if (messages.length > 0) {
@@ -296,7 +342,7 @@ async function simulateCargo(messages) {
             temperature: "20C"
           });
           CARGO_STATE = 1;
-          await subscriberPrivateSend(subFreightF, respJson, "Cargo");
+          await subscriberPrivateSend(subCargo, respJson, "Cargo");
         } 
       }
     }
@@ -326,7 +372,7 @@ async function simulateCargo(messages) {
       temperature: temp,
     });
     CARGO_STATE++;
-    await subscriberPrivateSend(subFreightF, respJson, "Cargo");
+    await subscriberPrivateSend(subCargo, respJson, "Cargo");
   }
 }
 
@@ -387,7 +433,7 @@ async function simulateFreigthF(messages) {
       id: "1235363674",
       status: "Delivered"
     });
-    await subscriberPrivateSend(subConsignee, respJson, "Freight Forwarder");
+    await subscriberPrivateSend(subFreightF, respJson, "Freight Forwarder");
   } else if (FF_STATE === 2) {
     FF_STATE = 0;
     let respJson = JSON.stringify({
@@ -400,7 +446,7 @@ async function simulateFreigthF(messages) {
       import: "importClearanceURL",
       export: "exportClearanceURL"
     });
-    await subscriberPrivateSend(subConsignee, respJson, "Freight Forwarder");
+    await subscriberPrivateSend(subFreightF, respJson, "Freight Forwarder");
   } 
 }
 

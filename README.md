@@ -2,6 +2,19 @@
 
 ## Application details
 
+Simulation of a supply chain. The participants send encrypted information and identify themselves via the IOTA tangle. 
+IOTA Streams are used to control access to the respective messages and IOTA Identity is used to authenticate the individual participants. 
+
+## Installation
+
+```
+git clone https://github.com/fprotopapa/iota-trade-and-supply-chain.git
+cd iota-trade-and-supply-chain
+
+npm install
+npm install ./identity
+```
+
 ### Participants
 
 | Participants        | Tasks | Data | Visibility |
@@ -35,8 +48,6 @@ Subscriber:
 
 ### Identity
 
-```
-npm install ./identity
-```
+
 
 

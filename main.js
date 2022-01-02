@@ -274,21 +274,15 @@ async function main() {
       
       while (true) {
         if (AUTHOR) {
-          let messagesAuth = await authorReceive(auth);
-          keyloadPublic = await sendFilteredAuthMessages(authPub, messagesAuth, keyloadPublic);
+          keyloadPublic = await sendFilteredAuthMessages(authPub, keyloadPublic);
         }
         if (SUBSCRIBER && SIMSUBS) {
-          let messages = [];
-          messages = await subscriberReceiveMessages(subShipper, 'Subscribers');
-          //console.log("Messages: ", messages)
-          await simulateConsignee(subConsignee, messages);
-          await simulateShipper(subShipper, messages);
-          await simulateFreigthF(subFreightF, messages);
+          await simulateConsignee(subConsignee);
+          await simulateShipper(subShipper);
+          await simulateFreigthF(subFreightF);
         }
         if (SUBSCRIBER && CARGO) {
-          let messages = [];
-          messages = await subscriberReceiveMessages(subCargo, 'Cargo');
-          await simulateCargo(subCargo, messages);
+          await simulateCargo(subCargo);
         }
         await delay(5000);
       }
@@ -296,7 +290,8 @@ async function main() {
   }
 }
 
-async function sendFilteredAuthMessages(caller, messages, keyloadLink) {
+async function sendFilteredAuthMessages(caller, keyloadLink) {
+  let messages = await authorReceive(caller);
   let keyload = keyloadLink;
   for (var i = 0; i < messages.length; i++) { 
     let msgJson = JSON.parse(messages[i]);
@@ -327,7 +322,8 @@ async function sendFilteredAuthMessages(caller, messages, keyloadLink) {
   return keyload;
 }
 
-async function simulateCargo(caller, messages) {
+async function simulateCargo(caller) {
+  let messages = await subscriberReceiveMessages(caller, 'Cargo');
   if (CARGO_STATE === 0) {
     for (var i = 0; i < messages.length; i++) { 
       let msgJson = JSON.parse(messages[i]);
@@ -376,7 +372,8 @@ async function simulateCargo(caller, messages) {
   }
 }
 
-async function simulateFreigthF(caller, messages) {
+async function simulateFreigthF(caller) {
+  let messages = await subscriberReceiveMessages(caller, 'Freight Forwarder');
   if (FF_STATE === 0) {
     for (var i = 0; i < messages.length; i++) { 
       let msgJson = JSON.parse(messages[i]);
@@ -394,33 +391,33 @@ async function simulateFreigthF(caller, messages) {
           FF_STATE = 2;
           await subscriberPrivateSend(caller, respJson, "Freight Forwarder");
         } 
-        if (msgJson.code === 222) { // Message from Cargo
-          let port = '';
-          let date = '';
-          if (msgJson.place === "Rotterdam") {
-            port = "Rotterdam";
-            date = "2021-12-18T18:00";
-          } else if (msgJson.place === "Berlin") {
-            port = "Berlin";
-            date = "2021-12-19T20:00";
-          } else if (msgJson.place === "Warsaw") {
-            port = "Warsaw";
-            date = "2021-12-20T21:00";
-            FF_STATE = 1;
-          } else if (msgJson.place === "New York") {
-            port = "New York";
-            date = "2021-12-16T06:30";
-          }
-          let respJson = JSON.stringify({
-            name: "FreightForw",
-            code: 333,
-            place: port,
-            time: date,
-            id: "1235363674",
-            status: "Shipping"
-          });
-          await subscriberPrivateSend(caller, respJson, "Freight Forwarder");
+      }
+      if (msgJson.code === 222) { // Message from Cargo
+        let port = '';
+        let date = '';
+        if (msgJson.place === "Rotterdam") {
+          port = "Rotterdam";
+          date = "2021-12-18T18:00";
+        } else if (msgJson.place === "Berlin") {
+          port = "Berlin";
+          date = "2021-12-19T20:00";
+        } else if (msgJson.place === "Warsaw") {
+          port = "Warsaw";
+          date = "2021-12-20T21:00";
+          FF_STATE = 1;
+        } else if (msgJson.place === "New York") {
+          port = "New York";
+          date = "2021-12-16T06:30";
         }
+        let respJson = JSON.stringify({
+          name: "FreightForw",
+          code: 333,
+          place: port,
+          time: date,
+          id: "1235363674",
+          status: "Shipping"
+        });
+        await subscriberPrivateSend(caller, respJson, "Freight Forwarder");
       }
     }
   } else if (FF_STATE === 1) {
@@ -450,10 +447,11 @@ async function simulateFreigthF(caller, messages) {
   } 
 }
 
-async function simulateConsignee(caller, messages) {
+async function simulateConsignee(caller) {
+  let messages = await subscriberReceiveMessages(caller, 'Consignee');
   if ((CONSIGNEE_STATE > 0) && (messages.length > 0)) {
     for (var i = 0; i < messages.length; i++) { 
-      let msgJson = JSON.parse(messages[i].replace(/\\/g, ""));
+      let msgJson = JSON.parse(messages[i]); //.replace(/\\/g, "")
       if (msgJson.code === 333) { // Message from Freight Forwarder
         if (msgJson.status === "Delivered") {
           let respJson = JSON.stringify({
@@ -482,7 +480,8 @@ async function simulateConsignee(caller, messages) {
   }
 }
 
-async function simulateShipper(caller, messages) {
+async function simulateShipper(caller) {
+  let messages = await subscriberReceiveMessages(caller, 'Shipper');
   if ((SHIPPER_STATE === 0) && (messages.length > 0)) {
     for (var i = 0; i < messages.length; i++) { 
       let msgJson = JSON.parse(messages[i]); 
@@ -536,7 +535,7 @@ async function authorPublicSend(authPub, messageJSON, messageLink){
   console.log("------ Author Public: Sending ---------------");
   console.log("---------------------------------------------");
   console.log("Author Pub sending signed packet to public SB");
-  let public_payloadPub = util.toBytes(JSON.stringify(messageJSON));
+  let public_payloadPub = util.toBytes(messageJSON);
   let masked_payloadPub = util.toBytes("");
   let msgLinkPub = messageLink;
   msgLinkPub = await util.sendSignedPacket(msgLinkPub, authPub, public_payloadPub, masked_payloadPub);
@@ -566,7 +565,7 @@ async function subscriberPrivateSend(sub, msgJson, name) {
   console.log("-----------------------------------------");
   console.log("------ Subscriber ", name, ": Sending ------------");
   console.log("-----------------------------------------");
-  console.log("Message: ", JSON.stringify(msgJson));
+  console.log("Message: ", msgJson);
   console.log( name, " sending signed packet to private SB");
   let msgLink = keyloadReceived;
   msgLink = await util.sendSignedPacket(msgLink, sub, public_payload, masked_payload);

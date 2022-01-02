@@ -274,7 +274,7 @@ async function main() {
       
       while (true) {
         if (AUTHOR) {
-          keyloadPublic = await sendFilteredAuthMessages(authPub, keyloadPublic);
+          keyloadPublic = await sendFilteredAuthMessages(auth, authPub, keyloadPublic);
         }
         if (SUBSCRIBER && SIMSUBS) {
           await simulateConsignee(subConsignee);
@@ -290,7 +290,7 @@ async function main() {
   }
 }
 
-async function sendFilteredAuthMessages(caller, keyloadLink) {
+async function sendFilteredAuthMessages(caller, pubCaller, keyloadLink) {
   let messages = await authorReceive(caller);
   let keyload = keyloadLink;
   for (var i = 0; i < messages.length; i++) { 
@@ -304,7 +304,7 @@ async function sendFilteredAuthMessages(caller, keyloadLink) {
           export: msgJson.export,
           import: msgJson.import
         });
-        keyload = await authorPublicSend(caller, respJson, keyload);
+        keyload = await authorPublicSend(pubCaller, respJson, keyload);
       }
     }
     if (msgJson.code === 222) { // Message from Cargo
@@ -316,7 +316,7 @@ async function sendFilteredAuthMessages(caller, keyloadLink) {
         time: msgJson.time,
         status: "Shipment status"
       });
-      keyload = await authorPublicSend(caller, respJson, keyload);
+      keyload = await authorPublicSend(pubCaller, respJson, keyload);
     }
   }
   return keyload;

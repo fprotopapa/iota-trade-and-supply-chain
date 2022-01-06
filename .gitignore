@@ -2,6 +2,8 @@
 secrets/
 ignore/
 **/binary_instance/*.bin
+**/identity/signed_credentials/*.json
+**/identity/weakhold/*.json
 
 # ignore iota streams repo
 streams/

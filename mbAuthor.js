@@ -15,8 +15,6 @@ const path = require('path');
 const configPath = './config/default.json';
 const config = require(configPath);
 
-
-
 var util = require('./utils');
 
 module.exports = {
@@ -25,7 +23,7 @@ module.exports = {
   parseAnnouncementLink,
   receiveSubscription
 }
-
+// Creating author instance and saving to binary
 async function makeAuthor(client, filename) {
     // Generate author
     // Check for existing author
@@ -59,7 +57,7 @@ async function makeAuthor(client, filename) {
       }
       return author;
 }
-
+// Print channel information
 function logChannel(author) {
     let announcementLink = streams.Address.parse(author.announcementLink());
     console.log("-----------------------------------------------------------------------")
@@ -70,11 +68,10 @@ function logChannel(author) {
     console.log("Announce message id: " + announcementLink.msgId);
     console.log("-----------------------------------------------------------------------")
 }
-
+// Make address object of announcment link string
 function parseAnnouncementLink(author) {
   return streams.Address.parse(author.announcementLink());
 }
-
 // Author receiving subscription
 async function receiveSubscription(subscribtionLink, author) {
   await author.clone().receive_subscribe(subscribtionLink.copy());

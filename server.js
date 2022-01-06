@@ -23,11 +23,11 @@ var announcementLinkPub = null;
 var subscribers = {};
 var keyload = null;
 var didAuthor = null;
-
+// Load DID object
 async function updateDID() {
   didAuthor = await util.getIdentityVPObject('offlineVerifiablePresentationAuthor.json');
 }
-
+// Change announcement link
 function updateAnnouncementLink(annLink, isPub) {
   if (isPub) {
     announcementLinkPub = annLink.toString();
@@ -35,15 +35,15 @@ function updateAnnouncementLink(annLink, isPub) {
     announcementLink = annLink.toString();
   }
 }
-
+// Change keyload link
 function updateKeyloadLink(keyloadLink) {
     keyload = keyloadLink.toString();
 }
-
+// Return registered subscribers
 function getSubscribers() {
   return subscribers;
 }
-
+// Start rest server
 function createAPI() {
   var rest = express();
   
@@ -87,9 +87,9 @@ function createAPI() {
     let did = req.body;
     if (util.verifyDID(did)) {
       if (keyload === null) {
-        res.send(JSON.stringify('No keyload available.'));
+        res.status(300).send();
       } else {
-        res.send(JSON.stringify(keyload));
+        res.status(200).send(JSON.stringify(keyload));
       }
     } else {
        res.status(403).send();

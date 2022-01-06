@@ -1,6 +1,6 @@
 {
   "env": {
-    "nodeUrl": "HORNET_NODE_ADDRES",
+    "nodeUrl": "HORNET_NODE_ADDRESS",
     "restUrl": "REST_SERVER",
     "authorPasswd": "AUTHOR_PASSWD"
   },

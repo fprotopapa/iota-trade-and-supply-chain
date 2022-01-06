@@ -4,7 +4,7 @@
 *  SPDX-License-Identifier: MIT
 *
 *  ToDo: 
-*        - Store or retrieve index to work with reloaded instances
+*
 */
 
 const streams = require('./node/streams');
@@ -17,12 +17,14 @@ const configPath = './config/default.json';
 const config = require(configPath);
 const https = require('https');
 const http = require('http');
+const { response } = require('express');
 
 module.exports = {
     showMessages,
     syncState,
     fetchNextMessages,
     sendSignedPacket,
+    sendTaggedPacket,
     toBytes,
     fromBytes,
     makeSeed,
@@ -43,7 +45,7 @@ module.exports = {
     showStates,
     getIdentityVPObject
 }
-
+// Display states of author or subscriber (shows publisher on channel)
 function showStates(caller) {
     let currStates = fetchState(caller);
     console.log(currStates);
@@ -58,8 +60,7 @@ function showStates(caller) {
     console.log(JSON.stringify(states));
     return states;
 }
-
-// Fetch state
+// Fetch state, returns last link to send messages to
 async function fetchLatestLinkSB(caller, name) {
     // Fetch publisher states (sync to get same results)
     console.log('Latest Messagelink for: ', name);
@@ -67,7 +68,7 @@ async function fetchLatestLinkSB(caller, name) {
     let currStates = caller.fetch_state();
     return streams.Address.parse(currStates[0].link.toString());
 }
-
+// Post request for rest server
 function postRequest(url, port, path, dataJson, protocol='https') {
     return new Promise((resolve, reject) => {
         const options = {
@@ -106,7 +107,7 @@ function postRequest(url, port, path, dataJson, protocol='https') {
     req.end();
     });
 }
-
+// Get request for rest server
 function getRequest(url, port, path, protocol='https') {
     return new Promise((resolve, reject) => {
         const options = {
@@ -143,7 +144,6 @@ function getRequest(url, port, path, protocol='https') {
     req.end();
     });
 }
-
 // Show fetched messages
 function showMessages(messages, subName) {
     console.log("Message for " + subName);
@@ -164,7 +164,6 @@ function showMessages(messages, subName) {
         }
     }
 }
-
 // Synch state before publishing
 async function syncState(sender) {
 console.log("Syncing state ...");
@@ -185,15 +184,20 @@ while (isMessage) {
 }
 return nextMsgs;
 }
-
+// Send tagged package
+async function sendTaggedPacket(msgLink, sender, publicPayload, maskedPayload) {
+    let response = await sender
+                .clone()
+                .send_tagged_packet(msgLink, publicPayload, maskedPayload);
+    return response.link;
+}
 // Publisher sending signed packet
 async function sendSignedPacket(msgLink, sender, publicPayload, maskedPayload) {
-response = await sender
-            .clone()
-            .send_signed_packet(msgLink, publicPayload, maskedPayload);
-return response.link;
+    let response = await sender
+                .clone()
+                .send_signed_packet(msgLink, publicPayload, maskedPayload);
+    return response.link;
 }
-  
 // Make bytes out of string
 function toBytes(str) {
     var bytes = [];
@@ -202,7 +206,6 @@ function toBytes(str) {
     }
     return bytes;
 }
-
 // Make string out of bytes
 function fromBytes(bytes) {
     var str = "";
@@ -211,7 +214,6 @@ function fromBytes(bytes) {
     }
     return str;
 }
-
 // Save json file
 function writeJsonFile(file, path) {
     fs.writeFile(path, JSON.stringify(file, null, 2), function writeJSON(err) {
@@ -219,7 +221,6 @@ function writeJsonFile(file, path) {
         console.log("File at " + path + " written.");
     });
 }
-
 // Create new random seed
 function makeSeed(size) {
     const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -229,7 +230,6 @@ function makeSeed(size) {
     }
     return seed;
 }
-
 function getEncryptPasswd() {
     // Read env variable name from config file
     encPwdEnv = config.env.authorPasswd; 
@@ -240,7 +240,7 @@ function getEncryptPasswd() {
     }
     return encPwd;
 }
-
+// Check if local file has extension
 function checkFileExtension(filename, defaultExtension) {
     let ext = path.extname(filename);
     if (!ext) {
@@ -248,12 +248,12 @@ function checkFileExtension(filename, defaultExtension) {
     }
     return filename;
 }
-
+// Make path relative to working directory
 function buildPath(pathToDir) {
     let dirWD = path.resolve(__dirname);
     return path.join(dirWD, pathToDir);
 }
-
+// Search for instance binary, return bool if found
 function isEncryptedBinary(filename, dirPath) {
     filename = checkFileExtension(filename, '.bin');
     let ext = path.extname(filename);
@@ -267,7 +267,7 @@ function isEncryptedBinary(filename, dirPath) {
     }
     return isInstance;
 }
-
+// Read env to get node url
 function getNodeURL() {
     // Read env variable name from config file
     nodeUrlEnv = config.env.nodeUrl; 
@@ -278,7 +278,7 @@ function getNodeURL() {
     }
     return nodeUrl;
 }
-
+// Read env to get rest server url
 function getRestURL() {
     // Read env variable name from config file
     restUrlEnv = config.env.restUrl; 
@@ -289,32 +289,30 @@ function getRestURL() {
     }
     return restUrl
 }
-
+// Generate client from node url
 async function makeClient() {
     let nodeUrl = getNodeURL();
     // Build client from node url
     const client = await new streams.ClientBuilder().node(nodeUrl).build();
     return client;
 }
-
+// Check identity document
 function verifyDID(did) {
     return identity.checkVPJson(did);
 }
-
+// Load identity object
 async function getIdentityVPObject(filename) {
     //Read VP object from JSON file
     dirPath = path.join(path.resolve(__dirname), 'identity', 'signed_credentials');
     let weakholdObject = JSON.parse(fs.readFileSync(path.join(dirPath, filename)));
     return weakholdObject;
 }
-
+// Returns address object from address string
 function parseMsgLinkStrToAddress(MsgLinkStr) {
     return streams.Address.parse(MsgLinkStr);
 }
-
+// Fetch state
 function fetchState(sender) {
     states = sender.fetch_state();
-    //console.log('link: ',states[0][0].get_link(), 'seq: ', states[0][0].get_seq_no(), 'branch: ', states[0][0].get_branch_no());
-    //console.log('link: ',states[1].get_link(), 'seq: ', states[1].get_seq_no(), 'branch: ', states[1].get_branch_no());
     return states;
 }

@@ -29,7 +29,7 @@ module.exports = {
     getKeyloadLink
 }
 
-// Generate Subscriber
+// Generate Subscriber and saving as binary
 function makeSubscriber(client, filename) {
     // Generate Subscriber
     // Check for existing subscriber
@@ -60,7 +60,6 @@ function makeSubscriber(client, filename) {
         }
     return sub;
 }
-
 // Subscribe to channel -> Return subscribtion link
 async function subscripeToChannel(announcementLink, subscriber) {
     // catch timeout
@@ -75,12 +74,11 @@ async function subscripeToChannel(announcementLink, subscriber) {
     console.log("-------------------------------------------------------------");
     return subLink;
 }
-
 // Subscriber receiving announcement
 async function receiveAnnouncement(announcementLink, subscriber) {
     await subscriber.clone().receive_announcement(announcementLink.copy());
 }    
-
+// Get announcement link from rest server
 function getAnnouncementLink (url, port, protocol='https', link='/ann') {
     return util.getRequest(url, port, link, protocol).then((data) => {
         const response = {
@@ -95,7 +93,7 @@ function getAnnouncementLink (url, port, protocol='https', link='/ann') {
         };
     }); 
 }
-
+// Post subscribtion link to rest server
 function sendSubscribtionLink(url, port, dataJson, protocol='https') {
     return util.postRequest(url, port, '/sub', dataJson, protocol).then((status) => {
         const response = {
@@ -108,7 +106,7 @@ function sendSubscribtionLink(url, port, dataJson, protocol='https') {
         };
     }); 
 }
-
+// Get keyload link from rest server
 function getKeyloadLink (url, port, dataJson, protocol='https') {
     return util.postRequest(url, port, '/key', dataJson, protocol).then((r) => {
         const response = {
@@ -123,7 +121,7 @@ function getKeyloadLink (url, port, dataJson, protocol='https') {
         };
     }); 
 }
-
+// Get authors did from rest server
 function getAuthorDID (url, port, protocol='https') {
     return util.getRequest(url, port, '/did', protocol).then((data) => {
         const response = {
@@ -138,7 +136,7 @@ function getAuthorDID (url, port, protocol='https') {
         };
     });
 }
-
+// Generate JSON representation of subscribtion link
 function makeSubLinkJson(subscribtionLink, did, name) {
     return data = JSON.stringify({
         sublink: subscribtionLink,
@@ -146,7 +144,7 @@ function makeSubLinkJson(subscribtionLink, did, name) {
         name: name
       });
 }
-
+// Receiving keyload
 function receiveKeyload(subscriber, link) {
     return subscriber.receive_keyload(link);
 }

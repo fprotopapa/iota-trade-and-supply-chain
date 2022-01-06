@@ -27,13 +27,15 @@ const SIMSUBS = true;
 
 async function main() {
   /*
-    Initizialization (Multi Branch Pub)
+    Initizialization
     Loading configuration, generating or loading author
     author -> announces channel
 
   */
+  // MS Delay function
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
   // Configure rest api
-  const restUrl = util.getRestURL();
+  const restUrl = 'localhost'//;util.getRestURL(); 
   const protocol = 'http';
   const port = 8000;
   /* 
@@ -142,21 +144,19 @@ async function main() {
           console.log('Ann Link Pub recv: ' + str);
         });
         if (SIMSUBS) {
-        // Receive and subscribe to channel
-        await subs.receiveAnnouncement(restAnnLink, subFreightF);
-        await subs.receiveAnnouncement(restAnnLink, subConsignee);
-        await subs.receiveAnnouncement(restAnnLink, subShipper);
-        await subs.receiveAnnouncement(restAnnLinkPub, subPublic);
-        var subLinkFreightF = await subs.subscripeToChannel(restAnnLink, subFreightF);
-        var subLinkConsignee = await subs.subscripeToChannel(restAnnLink, subConsignee);
-        var subLinkShipper = await subs.subscripeToChannel(restAnnLink, subShipper);
+          // Receive and subscribe to channel
+          await subs.receiveAnnouncement(restAnnLink, subFreightF);
+          await subs.receiveAnnouncement(restAnnLink, subConsignee);
+          await subs.receiveAnnouncement(restAnnLink, subShipper);
+          await subs.receiveAnnouncement(restAnnLinkPub, subPublic);
+          var subLinkFreightF = await subs.subscripeToChannel(restAnnLink, subFreightF);
+          var subLinkConsignee = await subs.subscripeToChannel(restAnnLink, subConsignee);
+          var subLinkShipper = await subs.subscripeToChannel(restAnnLink, subShipper);
         }
         if (CARGO) {
           await subs.receiveAnnouncement(restAnnLink, subCargo);
           var subLinkCargo = await subs.subscripeToChannel(restAnnLink, subCargo);
         }
-
-
         /*
           Author receives subscribtions & sends out keyload (needed to attach messages)
 
@@ -204,15 +204,15 @@ async function main() {
       }
 
     if (AUTHOR) {
-      // Get subscribed clients
+      // Get subscribed clients, check for all clients to register
       var actSubs = {};
-      while((Object.keys(actSubs).length === 0) && (Object.keys(actSubs).length < 4)) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      while((Object.keys(actSubs).length === 0) || (Object.keys(actSubs).length < 4)) {
+        await delay(1000);
         subscribers = api.getSubscribers();
         actSubs = JSON.parse(JSON.stringify(subscribers));
       }
       console.log('---------------------- Subscribed Subs ----------------------------------------');
-      console.log('Subscribers:' + JSON.stringify(actSubs));
+      console.log('Subscribers:' + JSON.stringify(actSubs, null, 2));
       console.log('-------------------------------------------------------------------------------');
       // Register subscribers
       let restSubLinkShipper = util.parseMsgLinkStrToAddress(actSubs["Shipper"]["subLink"]);
@@ -248,6 +248,7 @@ async function main() {
 
         Subs -> publishing to private branch
       */
+     await delay(30000);
      let did = '';
      if (CARGO) {
       did = didCargo;
@@ -255,23 +256,29 @@ async function main() {
       did = didShipper;
      }
       let didJson = JSON.stringify(did);
-      keyloadReceived = subs.getKeyloadLink(restUrl, port, didJson, protocol);
-      await keyloadReceived.then(function(result) {
-        let str = result.body.replace('"', '').replace(/"$/,'');
-        keyloadReceived = util.parseMsgLinkStrToAddress(str);
-        console.log("-----------------------------------------");
-        console.log("------ Keyload Link ---------------------");
-        console.log("-----------------------------------------");
-        console.log('Keyload Link recv: ' + str);
-      });
-    }
+      var keyloadReceived;
+      let returnCode = 300;
+      while (returnCode === 300 || returnCode === 403 || returnCode === 500) {
+        keyloadReceived = subs.getKeyloadLink(restUrl, port, didJson, protocol);
+        await keyloadReceived.then(function(result) {
+          returnCode = result.statusCode;
+          let str = result.body.replace('"', '').replace(/"$/,'');
+          keyloadReceived = util.parseMsgLinkStrToAddress(str);
+          console.log("-----------------------------------------");
+          console.log("------ Keyload Link ---------------------");
+          console.log("-----------------------------------------");
+          console.log('Keyload Link recv: ' + str);
+        }).catch(function(error) {
+          returnCode = error.statusCode;
+        });
+      }
 
+    }
+    // Enter simulation
     if (!DEBUG_SKIP_SENDING) {
       if (AUTHOR) {
         var keyloadPublic = announcementLinkPub;
-      }
-      const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-      
+      }    
       while (true) {
         if (AUTHOR) {
           keyloadPublic = await sendFilteredAuthMessages(auth, authPub, keyloadPublic);
@@ -289,7 +296,10 @@ async function main() {
     }
   }
 }
-
+/************************* 
+  Utility functions
+*************************/
+// Author filtering received messages and publishing to public channel
 async function sendFilteredAuthMessages(caller, pubCaller, keyloadLink) {
   let messages = await authorReceive(caller);
   let keyload = keyloadLink;
@@ -321,7 +331,7 @@ async function sendFilteredAuthMessages(caller, pubCaller, keyloadLink) {
   }
   return keyload;
 }
-
+// Simulating cargo, sends location and time to private channel
 async function simulateCargo(caller) {
   let messages = await subscriberReceiveMessages(caller, 'Cargo');
   if (CARGO_STATE === 0) {
@@ -371,7 +381,7 @@ async function simulateCargo(caller) {
     await subscriberPrivateSend(caller, respJson, "Cargo");
   }
 }
-
+// Simulating freight forwarder, sends cargo location and cargo clearance to private channel. Syncs with shipper and cargo
 async function simulateFreigthF(caller) {
   let messages = await subscriberReceiveMessages(caller, 'Freight Forwarder');
   if (FF_STATE === 0) {
@@ -446,7 +456,7 @@ async function simulateFreigthF(caller) {
     await subscriberPrivateSend(caller, respJson, "Freight Forwarder");
   } 
 }
-
+// Simulating consignee, orders cargo and accepts delivery
 async function simulateConsignee(caller) {
   let messages = await subscriberReceiveMessages(caller, 'Consignee');
   if ((CONSIGNEE_STATE > 0) && (messages.length > 0)) {
@@ -479,7 +489,7 @@ async function simulateConsignee(caller) {
     await subscriberPrivateSend(caller, respJson, "Consignee");
   }
 }
-
+// Simulating shipper, produces cargo and delivers to freight forwarder. Syncs with consignee
 async function simulateShipper(caller) {
   let messages = await subscriberReceiveMessages(caller, 'Shipper');
   if ((SHIPPER_STATE === 0) && (messages.length > 0)) {
@@ -520,7 +530,7 @@ async function simulateShipper(caller) {
       SHIPPER_STATE++;
     }
 }
-
+// Receiving messages for author
 async function authorReceive(author) {
   console.log("-----------------------------");
   console.log("Author fetching next messages");
@@ -529,11 +539,12 @@ async function authorReceive(author) {
   let messageStr = getMessageContent(messagesAut, "Author");
   return messageStr;
 }
-
+// Send messages to public channel
 async function authorPublicSend(authPub, messageJSON, messageLink){
   console.log("---------------------------------------------");
   console.log("------ Author Public: Sending ---------------");
   console.log("---------------------------------------------");
+  console.log("Message: ", messageJSON);
   console.log("Author Pub sending signed packet to public SB");
   let public_payloadPub = util.toBytes(messageJSON);
   let masked_payloadPub = util.toBytes("");
@@ -543,22 +554,22 @@ async function authorPublicSend(authPub, messageJSON, messageLink){
   console.log("Signed packet index: " + msgLinkPub.toMsgIndexHex());
   return msgLinkPub;
 }
-
+// Receivings messages for subscriber
 async function subscriberReceiveMessages(sub, name) {
   console.log("-------------------------------------------------");
   console.log("------ Subscriber ", name, ": Receiving ----------");
   console.log("-------------------------------------------------");
   // Sub receive messages
-  console.log("Subscriber", name, " fetching next messages");
   let messages = await util.fetchNextMessages(sub);
   let messagesStr = [];
   messagesStr = getMessageContent(messages, name);
   return messagesStr;
 }
-
+// Sending messages to private channel
 async function subscriberPrivateSend(sub, msgJson, name) {
   // Sub sending packages
   let keyloadReceived = await util.fetchLatestLinkSB(sub, name);
+  console.log(keyloadReceived.toString());
   // Signed packet
   let public_payload = util.toBytes("");
   let masked_payload = util.toBytes(msgJson);
@@ -572,10 +583,11 @@ async function subscriberPrivateSend(sub, msgJson, name) {
   console.log("Signed packet at: ", msgLink.toString());
   console.log("Signed packet index: " + msgLink.toMsgIndexHex());
 }
-
 // Show fetched messages
 function getMessageContent(messages, subName) {
-  console.log("Message for " + subName);
+  if (messages.length > 0) {
+    console.log("Message for " + subName);
+  }
   let messageStr = [];
   for (var i = 0; i < messages.length; i++) {
     let next = messages[i];
@@ -596,5 +608,5 @@ function getMessageContent(messages, subName) {
   }
   return messageStr;
 }
-
+// Start main
 main();

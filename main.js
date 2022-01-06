@@ -35,7 +35,7 @@ async function main() {
   // MS Delay function
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
   // Configure rest api
-  const restUrl = 'localhost'//;util.getRestURL(); 
+  const restUrl = util.getRestURL(); 
   const protocol = 'http';
   const port = 8000;
   /* 

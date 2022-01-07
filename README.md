@@ -73,6 +73,14 @@ Run application:
 ```
 node main.js
 ```
+
+To divide the participants among several processes, change global variables accordingly:
+
+* AUTHOR // Enable author
+* SUBSCRIBER // True when subscribers active
+* CARGO // Enable Cargo
+* SIMSUBS // Enable FF, Shipper and Consignee
+
 ### Implementation details
 
 * IOTA DLT for data integrity
@@ -83,20 +91,19 @@ node main.js
 
 Channel author is trusted third party:
 * Creates channel
-* Sends announcement link to participants (Rest API with order ID)
-* Adds subscribers (Needs subs Public Key (Rest API, after authentication)) 
-* Encrypts communication (Pub/Prv Keys)
-* Authorizes user access (Sends Keyload)
-* Publishes public information on public branch (Signed messages)
+* Off-tangle communication over REST-API
+* Adds subscribers 
+* Authorizes user access 
+* Publishes public information on public branch
 
 Subscriber:
 * Receiving announcement link
 * Subscribing to channel
-* Sending Public Key to author
 * Publishing messages on private branch
 
 ### Identity
 
-
-
-
+* Fictional Authority proofs participants
+* Participants sign their own digital document
+* Document saved as JSON
+* Enables authentication between participants
